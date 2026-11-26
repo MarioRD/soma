@@ -1,78 +1,81 @@
 /**
- * Contenido de la página en un solo lugar: lo usan las secciones y el JSON-LD (SEO).
- * Todo lo marcado TODO debe confirmarlo Soma antes de publicar.
+ * Datos del negocio en un solo lugar: los usan las páginas, el JSON-LD, el sitemap y llms.txt.
+ * Lo marcado TODO debe confirmarlo Soma antes de salir a producción.
  */
+
+// Dominio: en pruebas es GitHub Pages. Al comprar el dominio basta con definir VITE_SITE_URL en el build.
+const SITE_URL = (import.meta.env.VITE_SITE_URL as string | undefined) ?? 'https://mariord.github.io/soma'
 
 export const SITE = {
   name: 'Soma',
-  legalName: 'Soma Psicología', // TODO: confirmar nombre comercial
-  url: 'https://example.com', // TODO: dominio real
-  city: '', // TODO: ciudad (clave para SEO local: "psicólogo en <ciudad>")
-  whatsapp: '', // TODO: número de WhatsApp en formato 521XXXXXXXXXX
-  email: '', // TODO
-  address: '', // TODO
+  legalName: 'Soma Psicología',
+  url: SITE_URL.replace(/\/$/, ''),
+  whatsapp: '525634026000',
+  telefono: '56 3402 6000',
+  email: 'contacto@example.com', // TODO: correo real cuando exista el dominio
+  address: {
+    street: 'Calle Gruta', // TODO: número exterior / interior
+    colonia: 'Unidad Morelos 3ra Sección, San Pablo de las Salinas',
+    city: 'Tultitlán',
+    region: 'Estado de México',
+    postalCode: '54930',
+    country: 'MX',
+  },
+  geo: { lat: 19.6765695, lng: -99.0855066 },
+  mapsUrl: 'https://maps.app.goo.gl/8WtT53pfwD4DcDp79',
   hours: '', // TODO: horario de atención
-  modalidad: '', // TODO: presencial, en línea o ambas
+  costo: '', // TODO: costo y duración de la sesión
+  areaServed: ['Tultitlán', 'San Pablo de las Salinas', 'Coacalco', 'Tultepec', 'Cuautitlán Izcalli', 'Ecatepec'],
   social: {
     facebook: '', // TODO
     instagram: '', // TODO
   },
+  /** Constancias DC-3: activar solo cuando haya registro como Agente Capacitador Externo ante la STPS. */
+  dc3: false,
 } as const
 
-export type Terapia = {
-  id: string
-  nombre: string
-  corto: string
-  descripcion: string
-  paraQuien: string[]
+export const PSICOLOGA = {
+  nombre: 'Lidia Yamina Dorantes Estrada',
+  corto: 'Mtra. Lidia Dorantes',
+  completo: 'Mtra. Lidia Yamina Dorantes Estrada',
+  cedula: '4800043',
+  verificarCedula: 'https://www.cedulaprofesional.sep.gob.mx/',
+  formacion: [
+    { grado: 'Maestría en Psicoterapia Ericksoniana', institucion: 'Centro Ericksoniano de México', anio: 2012 },
+    { grado: 'Licenciatura en Psicología', institucion: 'Universidad del Valle de México, Campus Hispano', anio: 2005 },
+  ],
+} as const
+
+export const DIRECCION = `${SITE.address.street}, ${SITE.address.colonia}, ${SITE.address.city}, ${SITE.address.region}, C.P. ${SITE.address.postalCode}`
+
+export function whatsappUrl(texto = 'Hola, me gustaría agendar una sesión en Soma.') {
+  return `https://wa.me/${SITE.whatsapp}?text=${encodeURIComponent(texto)}`
 }
 
-export const TERAPIAS: Terapia[] = [
-  {
-    id: 'psicoterapia',
-    nombre: 'Psicoterapia',
-    corto: 'Hablar con alguien que sabe escuchar.',
-    descripcion:
-      'Un espacio confidencial para entender lo que sientes, ordenar lo que pesa y encontrar otra forma de estar contigo y con los demás.',
-    paraQuien: ['Ansiedad y estrés', 'Duelos y pérdidas', 'Relaciones y pareja', 'Autoestima'],
-  },
-  {
-    id: 'hipnosis-ericksoniana',
-    nombre: 'Psicoterapia con hipnosis ericksoniana',
-    corto: 'Un estado de calma para cambiar desde dentro.',
-    descripcion:
-      'La hipnosis ericksoniana usa la conversación, las metáforas y la relajación para acceder a recursos que ya tienes. Tú estás presente y consciente en todo momento.',
-    paraQuien: ['Miedos y fobias', 'Hábitos que quieres soltar', 'Dolor emocional antiguo', 'Bloqueos'],
-  },
-  {
-    id: 'constelaciones-familiares',
-    nombre: 'Constelaciones familiares',
-    corto: 'Ver a tu familia desde otro lugar.',
-    descripcion:
-      'Una mirada sistémica a los vínculos familiares: lo que se repite entre generaciones, los lugares que ocupamos y lo que necesita reconocerse para seguir adelante.',
-    paraQuien: ['Patrones que se repiten', 'Conflictos familiares', 'Lealtades invisibles', 'Decisiones difíciles'],
-  },
-]
-
+/** Preguntas generales (página /preguntas y FAQPage del inicio). */
 export const PREGUNTAS: { q: string; a: string }[] = [
+  {
+    q: '¿Cómo sé qué terapia es para mí?',
+    a: 'No necesitas saberlo antes de llegar. En la primera sesión platicamos lo que estás viviendo y elegimos juntos el camino: psicoterapia clínica, hipnosis ericksoniana, constelaciones familiares o una combinación.',
+  },
+  {
+    q: '¿Las sesiones son presenciales o en línea?',
+    a: 'Las dos. Puedes venir al consultorio en San Pablo de las Salinas, Tultitlán, o tomar tu sesión por videollamada desde cualquier lugar.',
+  },
   {
     q: '¿Con la hipnosis pierdo el control?',
     a: 'No. En la hipnosis ericksoniana estás despierto, escuchas todo y puedes abrir los ojos cuando quieras. Se parece más a estar muy concentrado y tranquilo que a dormir.',
   },
   {
-    q: '¿Qué pasa en una constelación familiar?',
-    a: 'Se representa a los miembros de tu sistema familiar para observar cómo se relacionan y qué está pidiendo ser visto. TODO: explicar si Soma las hace en grupo, individuales o ambas.',
-  },
-  {
-    q: '¿Cómo sé qué terapia es para mí?',
-    a: 'No necesitas saberlo antes de llegar. En la primera sesión platicamos lo que estás viviendo y elegimos juntos el camino.',
-  },
-  {
-    q: '¿Las sesiones son en línea o presenciales?',
-    a: 'TODO: confirmar modalidad, duración y costo de las sesiones.',
+    q: '¿Atienden a niños y adolescentes?',
+    a: 'Sí. Hay terapia infantil, para adolescentes, individual, de pareja y familiar. Con niños y adolescentes también se acompaña a madres, padres o tutores.',
   },
   {
     q: '¿Lo que hable es confidencial?',
-    a: 'Sí. Todo lo que compartes en sesión es confidencial, con las excepciones que marca la ley cuando hay riesgo para tu vida o la de otras personas.',
+    a: 'Sí. Lo que compartes en sesión es confidencial, con las excepciones que marca la ley cuando hay riesgo para tu vida o la de otras personas.',
+  },
+  {
+    q: '¿Cuánto cuesta y cuánto dura una sesión?',
+    a: 'TODO: confirmar costo y duración de la sesión.',
   },
 ]

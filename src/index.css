@@ -190,3 +190,13 @@
 .moon-mask {
   mask-image: radial-gradient(closest-side, var(--color-starlight) 88%, transparent 100%);
 }
+
+/* Menú móvil (popover nativo): anclado bajo la barra, a la derecha */
+.menu-movil {
+  position: fixed;
+  inset: auto 0.75rem auto auto;
+  top: calc(env(safe-area-inset-top, 0px) + 4.75rem);
+}
+.menu-movil::backdrop {
+  background: color-mix(in oklab, var(--color-night-950) 50%, transparent);
+}

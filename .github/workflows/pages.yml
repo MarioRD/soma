@@ -27,6 +27,10 @@ jobs:
       - run: npm run build
         env:
           BASE_PATH: /${{ github.event.repository.name }}/
+          # Dominio definitivo: cambiar la variable SITE_URL del repo (Settings → Variables) y BASE_PATH a "/"
+          VITE_SITE_URL: ${{ vars.SITE_URL || format('https://{0}.github.io/{1}', github.repository_owner, github.event.repository.name) }}
+          # Google Analytics 4: crear la variable GA_ID (G-XXXXXXX) en Settings → Variables
+          VITE_GA_ID: ${{ vars.GA_ID }}
       - uses: actions/configure-pages@v5
       - uses: actions/upload-pages-artifact@v3
         with:

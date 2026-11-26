@@ -1,16 +1,36 @@
 import { NightSky } from '@/components/effects/NightSky'
-import { Agendar } from '@/components/sections/Agendar'
-import { Comunidad } from '@/components/sections/Comunidad'
+import { Consent } from '@/components/Consent'
 import { Footer } from '@/components/sections/Footer'
-import { Hero } from '@/components/sections/Hero'
 import { Nav } from '@/components/sections/Nav'
-import { Preguntas } from '@/components/sections/Preguntas'
-import { PrimeraSesion } from '@/components/sections/PrimeraSesion'
-import { Terapias } from '@/components/sections/Terapias'
-import { StructuredData } from '@/components/StructuredData'
 import { useAmbient } from '@/hooks/useAmbient'
+import type { Route } from '@/lib/routes'
+import { Home } from '@/pages/Home'
+import { AgendarPage, Hub, NotFound, PreguntasPage, Privacidad, Sobre } from '@/pages/Paginas'
+import { ServicioPage } from '@/pages/ServicioPage'
 
-export default function App() {
+function Page({ route }: { route: Route }) {
+  switch (route.page) {
+    case 'home':
+      return <Home />
+    case 'servicio':
+      return <ServicioPage route={route} s={route.servicio!} />
+    case 'hub':
+      return <Hub route={route} />
+    case 'sobre':
+      return <Sobre route={route} />
+    case 'preguntas':
+      return <PreguntasPage route={route} />
+    case 'agendar':
+      return <AgendarPage route={route} />
+    case 'privacidad':
+      return <Privacidad route={route} />
+    default:
+      return <NotFound />
+  }
+}
+
+/** Sitio multipágina: cada ruta se prerenderiza a su propio HTML (scripts/prerender.mjs). */
+export default function App({ route }: { route: Route }) {
   useAmbient()
 
   return (
@@ -22,17 +42,12 @@ export default function App() {
         Saltar al contenido
       </a>
       <NightSky />
-      <Nav />
+      <Nav current={route.path} />
       <main id="contenido">
-        <Hero />
-        <Terapias />
-        <PrimeraSesion />
-        <Preguntas />
-        <Comunidad />
-        <Agendar />
+        <Page route={route} />
       </main>
       <Footer />
-      <StructuredData />
+      <Consent />
     </>
   )
 }
