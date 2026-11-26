@@ -1,0 +1,14 @@
+# Soma
+
+> Soma es un espacio de psicología. Además de psicoterapia, ofrece psicoterapia con hipnosis ericksoniana y constelaciones familiares.
+
+## Terapias
+- [Psicoterapia](https://example.com/#psicoterapia): espacio confidencial para ansiedad, estrés, duelos, relaciones y autoestima.
+- [Psicoterapia con hipnosis ericksoniana](https://example.com/#hipnosis-ericksoniana): conversación, metáforas y relajación; la persona está consciente en todo momento.
+- [Constelaciones familiares](https://example.com/#constelaciones-familiares): mirada sistémica a los vínculos y patrones familiares.
+
+## Agendar
+- [Primera sesión](https://example.com/#agendar): formulario de contacto. TODO: WhatsApp, correo, dirección, horario y modalidad.
+
+## Preguntas frecuentes
+- [Preguntas](https://example.com/#preguntas)
