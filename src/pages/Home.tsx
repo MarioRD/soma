@@ -53,7 +53,7 @@ function Busqueda() {
 function Amanecer({ children }: { children: ReactNode }) {
   return (
     <div className="relative overflow-clip bg-[linear-gradient(180deg,var(--color-night-950)_0%,var(--color-night-950)_42%,var(--color-night-850)_72%,var(--color-night-800)_100%)]">
-      <div aria-hidden="true" className="pointer-events-none absolute inset-x-0 bottom-0 h-[60%]">
+      <div aria-hidden="true" className="pointer-events-none absolute inset-x-0 bottom-0 h-[60%] [mask-image:linear-gradient(to_bottom,var(--color-night-950)_45%,transparent)]">
         <div className="absolute top-[10%] -left-[10%] size-[36rem] rounded-full bg-aurora-500/20 blur-[120px]" />
         <div className="absolute top-0 -right-[8%] size-[34rem] rounded-full bg-glacier-500/25 blur-[120px]" />
         <div className="absolute -right-[4%] bottom-[5%] size-[22rem] rounded-full bg-moon-300/20 blur-[100px]" />

@@ -2,12 +2,12 @@
  * Paisaje del hero en capas para el parallax.
  * - Cordilleras (m1–m4) y bosque con suelo y plantas (b1–b3): vectorizados desde las imágenes
  *   de referencia del diseño (src/lib/paisaje.ts).
- * - Primer plano: la roca y el árbol de la marca, vectorizados desde soma-arbol.png.
+ * - Primer plano: montículo con plantas (referencia del diseño) y el árbol de la marca (soma-arbol.png).
  *
  * Coordenadas: viewBox 2200 × 900. Todo es determinista y se calcula solo al prerenderizar;
  * el navegador recibe el SVG ya dibujado en el HTML.
  */
-import { ARBOL_D, ARBOL_H, ROCA } from './arbol-marca'
+import { ARBOL_D, ARBOL_H } from './arbol-marca'
 import { CAPAS } from './paisaje'
 
 // Mismas medidas que VIEWBOX en Hero.tsx
@@ -40,47 +40,36 @@ function trazada(k: Clave, y: number, arriba: string, abajo: string) {
   )
 }
 
-/* Cordilleras: lo más lejano es lo más claro (perspectiva atmosférica) */
-const m1 = () => trazada('m1', -150, '#455d7a', '#3d6a98')
-const m2 = () => trazada('m2', -150, '#264462', '#2f6ca3')
-const m3 = () => trazada('m3', -150, '#223153', '#3a6a9c')
-const m4 = () => trazada('m4', -150, '#12263e', '#2a5a8a')
+/*
+ * COLORES DEL PAISAJE: trazada(capa, desplazamiento y, color de la silueta, color de la neblina en su base).
+ * Cordilleras: lo más lejano es lo más claro (perspectiva atmosférica).
+ */
+const m1 = () => trazada('m1', -150, '#2c3f5a', '#2a4d75')
+const m2 = () => trazada('m2', -150, '#1a304b', '#24507e')
+const m3 = () => trazada('m3', -150, '#18233f', '#2a4f78')
+const m4 = () => trazada('m4', -150, '#0d1c30', '#1e4268')
 /* Bosque: pinos a los costados que bajan al valle; al frente, el suelo con plantas */
-const b1 = () => trazada('b1', -20, '#1a3e5f', '#2a6197')
-const b2 = () => trazada('b2', -20, '#0c2842', '#1f4f7d')
-const b3 = () => trazada('b3', -20, '#0a2037', '#0a2037')
+const b1 = () => trazada('b1', -20, '#122d47', '#1f4a75')
+const b2 = () => trazada('b2', -20, '#091f35', '#163a5e')
+const b3 = () => trazada('b3', -20, '#071a2e', '#071a2e')
 
-/* ───────────── Primer plano: roca y árbol de la marca ───────────── */
+/* ───────────── Primer plano: montículo con plantas y el árbol de la marca ───────────── */
 
 // base del tronco en x=790, y=655 del diseño; ancho ≈ 600 px del diseño
 const ARBOL_S = 0.74 // el trazo está a la mitad de resolución
 const ARBOL_TX = X(790) - 463 * ARBOL_S
 const ARBOL_TY = Y(655) - ARBOL_H * ARBOL_S
 
-/** Roca del logo bajo el árbol, con laderas suaves a los lados. */
-function roca() {
-  const pts = ROCA.map(([x, y]) => [ARBOL_TX + x * ARBOL_S, ARBOL_TY + y * ARBOL_S] as const)
-  const [x0, y0] = pts[0]
-  const [x1, y1] = pts[pts.length - 1]
-  return (x: number) => {
-    // laderas cortas y curvas: la roca es un montículo, no una pirámide
-    if (x <= x0) return y0 + ((x0 - x) / 120) ** 2 * 40
-    if (x >= x1) return y1 + ((x - x1) / 120) ** 2 * 40
-    let i = 0
-    while (x > pts[i + 1][0]) i++
-    const [ax, ay] = pts[i]
-    const [bx, by] = pts[i + 1]
-    return ay + ((by - ay) * (x - ax)) / (bx - ax)
-  }
-}
-
+/** Primer plano (f1) con el color de la página (currentColor = night-950): sin corte con la sección siguiente. */
 function primerPlano() {
-  const r = roca()
-  let d = `M-20 ${H}`
-  for (let x = -20; x <= W + 20; x += 6) d += `L${x} ${i0(Math.min(H, r(x)))}`
-  d += `L${W + 20} ${H}Z`
+  const f = CAPAS.f1
+  const s = W / f.w
+  // el segundo montículo (x≈790 de la referencia) queda justo bajo el tronco
+  const dx = ARBOL_TX + 463 * ARBOL_S - (790 / 1584) * W
+  const dy = Y(655) - 6 - (552 / 672) * f.h * s
   return (
-    `<path fill="currentColor" d="${d}"/>` +
+    `<path fill="currentColor" fill-rule="evenodd" transform="translate(${i0(dx)} ${i0(dy)}) scale(${s.toFixed(4)})" d="${f.d}"/>` +
+    `<rect x="0" y="${i0(dy + f.h * s - 2)}" width="${W}" height="200" fill="currentColor"/>` +
     `<path fill="currentColor" fill-rule="evenodd" transform="translate(${i0(ARBOL_TX)} ${i0(ARBOL_TY)}) scale(${ARBOL_S})" d="${ARBOL_D}"/>`
   )
 }
