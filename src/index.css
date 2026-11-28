@@ -189,6 +189,16 @@
   mask-image: linear-gradient(180deg, var(--color-starlight) 40%, transparent);
 }
 
+/* La aurora WebGL llega después de cargar: aparece desenfocada y se aclara, no de golpe */
+@keyframes aurora-entra {
+  from { opacity: 0; filter: blur(28px); }
+  to { opacity: 1; filter: blur(0); }
+}
+.aurora-entra { animation: aurora-entra 2.2s var(--ease-soft) both; }
+@media (prefers-reduced-motion: reduce) {
+  .aurora-entra { animation: none; }
+}
+
 .aurora-static {
   opacity: 0.7;
   background:
@@ -228,6 +238,14 @@
   .capa > svg {
     top: auto;
     height: 68%;
+  }
+  /* las cordilleras, más grandes y centradas en el pico mayor (x≈333 de 2200): montaña imponente en celular */
+  .capa.montes > svg {
+    left: 50%;
+    width: auto;
+    height: 82%;
+    aspect-ratio: 2200 / 900;
+    transform: translateX(-15.1%);
   }
 }
 

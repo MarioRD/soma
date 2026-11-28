@@ -83,11 +83,11 @@ export function Hero() {
       </div>
 
       {/* k más separados entre capas = parallax más notorio (también en celular) */}
-      <Capa k={0.9} id="m1" />
-      <Capa k={0.84} id="m2" />
+      <Capa k={0.9} id="m1" className="montes" />
+      <Capa k={0.84} id="m2" className="montes" />
       <Niebla k={0.8} top="34%" d="120s" className="opacity-60" />
-      <Capa k={0.76} id="m3" />
-      <Capa k={0.68} id="m4" />
+      <Capa k={0.76} id="m3" className="montes" />
+      <Capa k={0.68} id="m4" className="montes" />
       <Niebla k={0.64} top="44%" d="110s" className="opacity-70" />
 
       {/* el titular vive entre las cordilleras y el bosque: al bajar, el bosque pasa por delante */}

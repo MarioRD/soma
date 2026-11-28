@@ -87,7 +87,7 @@ export default function Aurora({ className = 'absolute inset-x-0 top-0 h-[85vh] 
     }
   }, [])
 
-  return <canvas ref={ref} aria-hidden="true" className={`aurora-fade ${className}`} />
+  return <canvas ref={ref} aria-hidden="true" className={`aurora-fade aurora-entra ${className}`} />
 }
 
 /** Dibuja la aurora (~30 fps) y la pausa fuera de pantalla o con la pestaña oculta. */
