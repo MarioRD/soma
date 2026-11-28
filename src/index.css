@@ -1,7 +1,7 @@
 /* Hallmark · v2.0.0 · theme: custom · idea: "la noche no se apaga, se ilumina: cada panel es un farol de vidrio con una vela dentro" · vibe: "anochecer sereno, auroras, vidrio con luz cálida" · paper: dark (night-950) · accent: candle (cálido) + aurora (frío, solo en el cielo) · faces: Fraunces / Manrope (del proyecto) · posture: dark/roman-serif/warm · job: book · hero: paisaje nocturno en capas SVG con parallax (aurora, montañas, neblina, árbol en flor), titular centrado entre capas · nav: pill flotante con la firma y "Agendar" · footer: firma grande + aviso de crisis · signature: faroles de vidrio que la luz del cursor enciende */
 /* Hallmark · pre-emit critique: P4 H4 E4 S4 R3 V4 · weakest: R, el cielo animado + faroles pueden sobrar; el cielo queda quieto con reduced-motion y la aurora solo vive arriba */
 /* waive 29: el usuario pidió vidrio iluminado como lámpara; el resplandor y el halo de luna son la idea, no adorno */
-/* waive 2a: el degradado del cielo es el cielo nocturno del hero (azul noche a azul horizonte), no decoración */
+/* waive 2a: los degradados son cielos (noche del hero; día, atardecer y noche del recorrido del infinito), pedidos por el usuario, no decoración */
 /* waive 2b: texto con brillo pedido por el usuario (hover tipo ShinyText); en reposo es tinta sólida starlight */
 /* waive 26b: :active y :disabled viven en buttonClass (src/lib/ui.ts), que el lint no lee */
 @import 'tailwindcss';
@@ -37,6 +37,24 @@
   --color-candle-200: #ffe7c2;
   --color-candle-50: #fffdf6; /* el punto más brillante del destello */
   --color-starlight: #f4f6ff;
+
+  /* Recorrido del infinito: una escena por público */
+  --color-kid-shadow: rgb(40 30 90 / 0.25); /* sombra de las figuras */
+  --color-kid-50: #f6f4fc; /* infantil: blanco lavanda */
+  --color-kid-100: #ebe6fa;
+  --color-teen-700: #3a1670; /* adolescentes: morado */
+  --color-teen-900: #1c0a3d;
+  --color-calm-600: #0d6f6a; /* individual: verde agua */
+  --color-calm-800: #07514f;
+  --color-sky-day-300: #a9d2f2; /* pareja: cielo */
+  --color-sky-day-500: #4b98d4;
+  --color-sunset-900: #2b1f5c; /* familiar: atardecer */
+  --color-sunset-700: #7a3f8a;
+  --color-sunset-500: #e0677a;
+  --color-sunset-400: #f59a5f;
+  --color-sunset-200: #ffd98a;
+  --color-sunset-hill-700: #4a2147;
+  --color-sunset-hill-900: #2a1230;
   --color-mist: #aeb6d8; /* texto secundario sobre noche (AA) */
 
   --font-serif: 'Fraunces Variable', ui-serif, Georgia, serif;
@@ -194,7 +212,7 @@
   from { opacity: 0; filter: blur(28px); }
   to { opacity: 1; filter: blur(0); }
 }
-.aurora-entra { animation: aurora-entra 2.2s var(--ease-soft) both; }
+.aurora-entra { animation: aurora-entra 1s var(--ease-soft) both; }
 @media (prefers-reduced-motion: reduce) {
   .aurora-entra { animation: none; }
 }
@@ -369,4 +387,79 @@
 /* Con liquid glass activo (Chromium) el tinte baja para que se vea la refracción */
 [data-liquid] {
   background: color-mix(in oklab, var(--color-night-800) 22%, transparent) !important;
+}
+
+/* ───────────── Recorrido del infinito ───────────── */
+/* Cada escena funde su parte baja con el color de arriba de la siguiente: sin cortes al bajar */
+.tramo-infantil {
+  background: linear-gradient(180deg, var(--color-kid-50) 0%, var(--color-kid-100) 88%, var(--color-teen-700) 100%);
+}
+.tramo-adolescentes {
+  background: linear-gradient(180deg, var(--color-teen-700) 0%, var(--color-teen-900) 88%, var(--color-calm-800) 100%);
+}
+.tramo-individual {
+  background: linear-gradient(180deg, var(--color-calm-800) 0%, var(--color-calm-600) 88%, var(--color-sky-day-500) 100%);
+}
+.tramo-pareja {
+  background: linear-gradient(180deg, var(--color-sky-day-500) 0%, var(--color-sky-day-300) 88%, var(--color-sunset-900) 100%);
+}
+.tramo-familiar {
+  background:
+    radial-gradient(45% 30% at 64% 58%, color-mix(in oklab, var(--color-sunset-200) 70%, transparent), transparent 70%),
+    linear-gradient(180deg, var(--color-sunset-900) 0%, var(--color-sunset-700) 30%, var(--color-sunset-500) 52%, var(--color-sunset-400) 64%, var(--color-sunset-200) 76%, var(--color-sunset-hill-700) 80%);
+}
+.tramo-final {
+  background: linear-gradient(180deg, var(--color-sunset-hill-900) 0%, var(--color-night-900) 30%, var(--color-night-950) 100%);
+}
+
+.cuerpo { touch-action: none; cursor: grab; user-select: none; will-change: transform; }
+.cuerpo:active { cursor: grabbing; }
+
+/* Individual: respiración guiada, anillos que se expanden y contraen lento */
+.respira span {
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  border: 1px solid color-mix(in oklab, var(--color-aurora-300) 40%, transparent);
+  background: radial-gradient(closest-side, color-mix(in oklab, var(--color-aurora-300) 14%, transparent), transparent);
+}
+.respira span:nth-child(2) { inset: 16%; }
+.respira span:nth-child(3) { inset: 32%; background: radial-gradient(closest-side, color-mix(in oklab, var(--color-candle-200) 35%, transparent), transparent); }
+@keyframes respira {
+  0%, 100% { transform: scale(0.8); opacity: 0.55; }
+  45%, 55% { transform: scale(1.08); opacity: 1; }
+}
+
+/* Familiar: el sol que se oculta */
+.sol {
+  background: radial-gradient(closest-side, var(--color-candle-50), var(--color-sunset-200) 45%, color-mix(in oklab, var(--color-sunset-400) 0%, transparent));
+  box-shadow: 0 0 120px 40px color-mix(in oklab, var(--color-sunset-200) 45%, transparent);
+}
+
+@keyframes aleteo {
+  0%, 100% { transform: scaleY(1); }
+  50% { transform: scaleY(-0.55); }
+}
+@keyframes vuelo {
+  from { transform: translate3d(-40%, 10%, 0); }
+  to { transform: translate3d(140vw, -14%, 0); }
+}
+@keyframes nube {
+  from { transform: translateX(-3%); }
+  to { transform: translateX(3%); }
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .respira span { animation: respira 9s ease-in-out infinite; }
+  .respira span:nth-child(2) { animation-delay: -0.6s; }
+  .respira span:nth-child(3) { animation-delay: -1.2s; }
+  .aves { animation: vuelo 38s linear infinite; }
+  .aves .ala { transform-box: fill-box; transform-origin: 50% 100%; animation: aleteo var(--d, 0.7s) ease-in-out infinite; }
+  .nube-deriva { animation: nube 24s ease-in-out infinite alternate; }
+  .nube-deriva:nth-child(even) { animation-duration: 31s; animation-direction: alternate-reverse; }
+}
+
+html[data-nav-oscura] header nav[aria-label='Principal'] {
+  background: color-mix(in oklab, var(--color-night-900) 82%, transparent) !important;
+  transition: background-color 300ms var(--ease-soft);
 }

@@ -60,9 +60,9 @@ export function Hero() {
     let idle = 0
     const t = setTimeout(() => {
       idle = window.requestIdleCallback
-        ? window.requestIdleCallback(() => setAurora(true), { timeout: 3000 })
+        ? window.requestIdleCallback(() => setAurora(true), { timeout: 700 })
         : (setTimeout(() => setAurora(true), 0) as unknown as number)
-    }, 1500)
+    }, 300)
     return () => {
       clearTimeout(t)
       window.cancelIdleCallback?.(idle)

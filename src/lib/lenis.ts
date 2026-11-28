@@ -10,3 +10,4 @@ export const pausarScroll = (pausa: boolean) => {
   else instancia?.start()
   document.documentElement.style.overflow = pausa ? 'hidden' : ''
 }
+export const getLenis = () => instancia

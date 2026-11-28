@@ -2,16 +2,14 @@ import { useRef, type CSSProperties, type ReactNode } from 'react'
 import { Buscador } from '@/components/Buscador'
 import { AgendarCta } from '@/components/sections/AgendarCta'
 import { Enfoques } from '@/components/sections/Enfoques'
+import { Recorrido } from '@/components/sections/Recorrido'
 import { Comunidad } from '@/components/sections/Comunidad'
 import { Hero } from '@/components/sections/Hero'
 import { ButtonLink } from '@/components/ui/Button'
 import { FaqList } from '@/components/ui/FaqList'
 import { Retrato } from '@/components/ui/Retrato'
-import { ServicioLink } from '@/components/ui/ServicioLink'
-import { byKind } from '@/content/servicios'
 import { useScrollEffect } from '@/hooks/useScrollEffect'
 import { DIRECCION, PREGUNTAS, PSICOLOGA, SITE, whatsappUrl } from '@/lib/content'
-import { HUB_PATH } from '@/lib/routes'
 import { CONTAINER } from '@/lib/ui'
 import { to } from '@/lib/url'
 
@@ -53,7 +51,7 @@ function Busqueda() {
 function Amanecer({ children }: { children: ReactNode }) {
   return (
     <div className="relative overflow-clip bg-[linear-gradient(180deg,var(--color-night-950)_0%,var(--color-night-950)_42%,var(--color-night-850)_72%,var(--color-night-800)_100%)]">
-      <div aria-hidden="true" className="pointer-events-none absolute inset-x-0 bottom-0 h-[60%] [mask-image:linear-gradient(to_bottom,var(--color-night-950)_45%,transparent)]">
+      <div aria-hidden="true" className="pointer-events-none absolute inset-x-0 bottom-0 h-[60%] [mask-image:linear-gradient(to_bottom,transparent,var(--color-night-950)_30%,var(--color-night-950)_55%,transparent)]">
         <div className="absolute top-[10%] -left-[10%] size-[36rem] rounded-full bg-aurora-500/20 blur-[120px]" />
         <div className="absolute top-0 -right-[8%] size-[34rem] rounded-full bg-glacier-500/25 blur-[120px]" />
         <div className="absolute -right-[4%] bottom-[5%] size-[22rem] rounded-full bg-moon-300/20 blur-[100px]" />
@@ -105,23 +103,9 @@ function ParaQuien() {
           </h2>
         </div>
       </div>
-      <div className={`${CONTAINER} pb-24 sm:pb-32`}>
-        <div className="flex justify-end">
-          <a href={to(HUB_PATH)} className="text-candle-200 underline decoration-1 underline-offset-4 hover:text-starlight">
-            Ver todo lo que atendemos
-          </a>
-        </div>
-        <ul className="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          {byKind('publico').map((s) => (
-            <li key={s.slug}>
-              <ServicioLink s={s} />
-            </li>
-          ))}
-          <li>
-            <ServicioLink s={byKind('modalidad').find((m) => m.slug === 'terapia-en-linea')!} />
-          </li>
-        </ul>
-      </div>
+      {/* de la noche al blanco de la primera escena */}
+      <div aria-hidden="true" className="h-[60svh] bg-[linear-gradient(180deg,var(--color-night-950)_0%,var(--color-night-800)_35%,var(--color-moon-300)_75%,var(--color-kid-50)_100%)]" />
+      <Recorrido />
     </section>
   )
 }
