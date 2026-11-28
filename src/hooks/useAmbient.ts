@@ -1,5 +1,6 @@
 import Lenis from 'lenis'
 import { useEffect } from 'react'
+import { setLenis } from '@/lib/lenis'
 
 /**
  * Efectos de ambiente de toda la página (solo cliente):
@@ -28,6 +29,7 @@ export function useAmbient() {
     let raf = 0
     if (!window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
       lenis = new Lenis({ anchors: { offset: -24 }, lerp: 0.1 })
+      setLenis(lenis)
       const tick = (t: number) => {
         lenis?.raf(t)
         raf = requestAnimationFrame(tick)
@@ -39,6 +41,7 @@ export function useAmbient() {
       document.removeEventListener('pointermove', onMove)
       cancelAnimationFrame(raf)
       lenis?.destroy()
+      setLenis(null)
     }
   }, [])
 }

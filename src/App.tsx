@@ -41,7 +41,8 @@ export default function App({ route }: { route: Route }) {
       >
         Saltar al contenido
       </a>
-      <NightSky />
+      {/* la portada trae su propio cielo en capas (Hero) */}
+      {route.page !== 'home' && <NightSky />}
       <Nav current={route.path} />
       <main id="contenido">
         <Page route={route} />

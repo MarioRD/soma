@@ -1,4 +1,5 @@
-import { useId, useMemo, useState, type FormEvent } from 'react'
+import { useId, useMemo, useRef, useState, type FormEvent } from 'react'
+import { LiquidGlass } from '@/components/effects/LiquidGlass'
 import { KIND_LABEL, SERVICIOS, type Servicio } from '@/content/servicios'
 import { whatsappUrl } from '@/lib/content'
 import { to } from '@/lib/url'
@@ -56,10 +57,14 @@ function search(index: Entry[], q: string) {
     .map((r) => r.s)
 }
 
-export function Buscador({ id = 'buscador' }: { id?: string }) {
+/**
+ * `grande`: versión de portada (sección propia, centrada, con el título como h2 y liquid glass).
+ */
+export function Buscador({ id = 'buscador', grande = false }: { id?: string; grande?: boolean }) {
   const [q, setQ] = useState('')
   const results = useMemo(() => search(INDEX, q), [q])
   const statusId = useId()
+  const pill = useRef<HTMLDivElement>(null)
   const typed = q.trim().length >= 2
 
   function onSubmit(e: FormEvent) {
@@ -67,28 +72,53 @@ export function Buscador({ id = 'buscador' }: { id?: string }) {
     if (results[0]) window.location.href = to(`/${results[0].slug}/`)
   }
 
+  const label = (
+    <label
+      htmlFor={id}
+      className={grande ? 'shine text-[clamp(2.4rem,5.6vw,4.5rem)] leading-[1.04] tracking-[-0.015em]' : 'font-serif text-xl text-starlight sm:text-2xl'}
+    >
+      ¿Qué estás viviendo?
+    </label>
+  )
+
   return (
-    <div className="w-full max-w-xl">
+    <div className={grande ? 'mx-auto w-full max-w-3xl text-center' : 'w-full max-w-xl'}>
       <form role="search" onSubmit={onSubmit}>
-        <label htmlFor={id} className="font-serif text-xl text-starlight sm:text-2xl">
-          ¿Qué estás viviendo?
-        </label>
-        <div className="glass mt-3 flex items-center gap-3 rounded-full py-1.5 pr-1.5 pl-5 focus-within:ring-2 focus-within:ring-candle-200">
-          <svg aria-hidden="true" viewBox="0 0 24 24" className="size-5 shrink-0 text-mist">
-            <circle cx="11" cy="11" r="6.5" fill="none" stroke="currentColor" strokeWidth="1.6" />
-            <path d="m16 16 4 4" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
-          </svg>
-          <input
-            id={id}
-            type="search"
-            value={q}
-            onChange={(e) => setQ(e.target.value)}
-            placeholder="Ansiedad, duelo, pareja…"
-            autoComplete="off"
-            enterKeyHint="search"
-            aria-describedby={statusId}
-            className="min-h-11 w-full min-w-0 bg-transparent text-base text-starlight placeholder:text-mist/80 focus:outline-none"
-          />
+        {grande ? <h2 className="font-normal">{label}</h2> : label}
+        {grande && (
+          <p className="mx-auto mt-5 max-w-[42ch] text-lg leading-relaxed text-moon-100">
+            Escríbelo con tus palabras. Te llevamos a lo que puede ayudarte.
+          </p>
+        )}
+        <div className={grande ? 'group relative mx-auto mt-10 max-w-2xl' : 'relative mt-3'}>
+          {grande && (
+            // la vela bajo el buscador: se aviva al escribir
+            <div
+              aria-hidden="true"
+              className="pointer-events-none absolute -inset-x-10 -inset-y-12 rounded-full bg-[radial-gradient(closest-side,color-mix(in_oklab,var(--color-candle-500)_32%,transparent),transparent)] opacity-50 transition-opacity duration-700 group-focus-within:opacity-100"
+            />
+          )}
+          {grande && <LiquidGlass target={pill} radius={40} />}
+          <div
+            ref={pill}
+            className={`glass relative flex items-center gap-3 rounded-full focus-within:ring-2 focus-within:ring-candle-200 ${grande ? 'py-2 pr-2 pl-6' : 'py-1.5 pr-1.5 pl-5'}`}
+          >
+            <svg aria-hidden="true" viewBox="0 0 24 24" className="size-5 shrink-0 text-mist">
+              <circle cx="11" cy="11" r="6.5" fill="none" stroke="currentColor" strokeWidth="1.6" />
+              <path d="m16 16 4 4" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
+            </svg>
+            <input
+              id={id}
+              type="search"
+              value={q}
+              onChange={(e) => setQ(e.target.value)}
+              placeholder="Ansiedad, duelo, pareja…"
+              autoComplete="off"
+              enterKeyHint="search"
+              aria-describedby={statusId}
+              className={`w-full min-w-0 bg-transparent text-starlight placeholder:text-mist/80 focus:outline-none ${grande ? 'min-h-12 text-lg' : 'min-h-11 text-base'}`}
+            />
+          </div>
         </div>
       </form>
 
@@ -98,7 +128,7 @@ export function Buscador({ id = 'buscador' }: { id?: string }) {
 
       {typed ? (
         results.length ? (
-          <ul className="mt-4 grid gap-2">
+          <ul className={`grid gap-2 text-left ${grande ? 'mt-6 sm:grid-cols-2' : 'mt-4'}`}>
             {results.map((s) => (
               <li key={s.slug}>
                 <a
@@ -112,7 +142,7 @@ export function Buscador({ id = 'buscador' }: { id?: string }) {
             ))}
           </ul>
         ) : (
-          <p className="mt-4 max-w-[46ch] text-[0.95rem] leading-relaxed text-moon-100">
+          <p className={`max-w-[46ch] text-[0.95rem] leading-relaxed text-moon-100 ${grande ? 'mx-auto mt-6' : 'mt-4'}`}>
             No encontramos esa palabra, pero no importa: cuéntanos qué pasa{' '}
             <a href={whatsappUrl()} className="text-candle-200 underline decoration-1 underline-offset-4 hover:text-starlight">
               por WhatsApp
@@ -121,12 +151,19 @@ export function Buscador({ id = 'buscador' }: { id?: string }) {
           </p>
         )
       ) : (
-        <ul className="mt-4 flex flex-wrap gap-2" aria-label="Sugerencias">
+        <ul
+          className={grande ? 'mt-8 flex flex-wrap justify-center gap-2.5 md:grid md:grid-cols-3' : 'mt-4 flex flex-wrap gap-2'}
+          aria-label="Sugerencias"
+        >
           {SUGERENCIAS.map((s) => (
-            <li key={s.slug}>
+            <li key={s.slug} className={grande ? 'flex' : undefined}>
               <a
                 href={to(`/${s.slug}/`)}
-                className="inline-flex min-h-10 items-center rounded-full px-4 text-[0.92rem] text-moon-100 ring-1 ring-starlight/15 ring-inset transition-colors duration-200 hover:bg-starlight/10 hover:text-starlight"
+                className={
+                  grande
+                    ? 'glass flex min-h-11 w-full items-center justify-center rounded-full px-4 md:min-h-12 text-[0.93rem] text-moon-100 transition-[color,background-color,box-shadow] duration-300 hover:bg-starlight/10 hover:text-candle-200 hover:shadow-[0_0_30px_-10px_var(--color-candle-500)]'
+                    : 'inline-flex min-h-10 items-center rounded-full px-4 text-[0.92rem] text-moon-100 ring-1 ring-starlight/15 ring-inset transition-colors duration-200 hover:bg-starlight/10 hover:text-starlight'
+                }
               >
                 {s.label}
               </a>

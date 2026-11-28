@@ -24,7 +24,8 @@ export function NightSky() {
       <Stars />
       {aurora && (
         <Suspense fallback={null}>
-          <Aurora />
+          {/* en páginas interiores la aurora acompaña sin competir con el texto */}
+          <Aurora className="absolute inset-x-0 top-0 h-[85vh] w-full opacity-60" />
         </Suspense>
       )}
       <div className="absolute inset-x-0 bottom-0 h-40 bg-linear-to-t from-night-950 to-transparent" />

@@ -1,4 +1,6 @@
+import { useRef } from 'react'
 import firma from '@/assets/brand/web/firma-sm.png'
+import { LiquidGlass } from '@/components/effects/LiquidGlass'
 import { ButtonLink } from '@/components/ui/Button'
 import { HUB_PATH } from '@/lib/routes'
 import { to } from '@/lib/url'
@@ -12,9 +14,12 @@ const NAV_LINKS = [
 
 /** Menú móvil con la Popover API nativa: funciona sin hidratar React y cierra con Esc / clic fuera. */
 export function Nav({ current }: { current: string }) {
+  const navRef = useRef<HTMLElement>(null)
   return (
     <header className="fixed inset-x-0 top-[calc(env(safe-area-inset-top,0px)+0.75rem)] z-50 px-3">
+      <LiquidGlass target={navRef} radius={40} />
       <nav
+        ref={navRef}
         aria-label="Principal"
         className="glass mx-auto flex max-w-6xl items-center justify-between gap-3 rounded-full py-2 pr-2 pl-5"
       >

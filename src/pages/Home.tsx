@@ -1,4 +1,7 @@
+import { useRef, type CSSProperties, type ReactNode } from 'react'
+import { Buscador } from '@/components/Buscador'
 import { AgendarCta } from '@/components/sections/AgendarCta'
+import { Enfoques } from '@/components/sections/Enfoques'
 import { Comunidad } from '@/components/sections/Comunidad'
 import { Hero } from '@/components/sections/Hero'
 import { ButtonLink } from '@/components/ui/Button'
@@ -6,7 +9,8 @@ import { FaqList } from '@/components/ui/FaqList'
 import { Retrato } from '@/components/ui/Retrato'
 import { ServicioLink } from '@/components/ui/ServicioLink'
 import { byKind } from '@/content/servicios'
-import { DIRECCION, PREGUNTAS, PSICOLOGA, SITE } from '@/lib/content'
+import { useScrollEffect } from '@/hooks/useScrollEffect'
+import { DIRECCION, PREGUNTAS, PSICOLOGA, SITE, whatsappUrl } from '@/lib/content'
 import { HUB_PATH } from '@/lib/routes'
 import { CONTAINER } from '@/lib/ui'
 import { to } from '@/lib/url'
@@ -14,54 +18,100 @@ import { to } from '@/lib/url'
 const H2 = 'text-[clamp(2.2rem,4.4vw,3.75rem)] leading-[1.05] font-normal'
 const SECTION = 'py-24 sm:py-32'
 
-function Enfoques() {
+/* Luciérnagas del buscador: posiciones fijas (mismo HTML en servidor y cliente) */
+const LUCES = Array.from({ length: 16 }, (_, i) => ({
+  left: `${(i * 37 + 11) % 97}%`,
+  top: `${35 + ((i * 53) % 60)}%`,
+  '--d': `${10 + (i % 5) * 2.5}s`,
+  '--delay': `${-(i * 1.7)}s`,
+  '--dx': `${i % 2 ? 24 : -18}px`,
+})) as CSSProperties[]
+
+/** Buscador a pantalla completa: la parte más oscura de la noche, con una vela y luciérnagas. */
+function Busqueda() {
   return (
-    <section aria-labelledby="enfoques-titulo" className={SECTION}>
-      <div className={CONTAINER}>
-        <h2 id="enfoques-titulo" className={`${H2} max-w-[18ch]`}>
-          Tres formas de acompañarte, una misma calma
-        </h2>
-        <ol className="mt-14 grid gap-5">
-          {byKind('enfoque').map((t, i) => (
-            <li key={t.slug}>
-              <a
-                href={to(`/${t.slug}/`)}
-                className="lantern group grid gap-8 rounded-[2rem] p-7 sm:p-10 md:grid-cols-[minmax(0,1fr)_minmax(0,1fr)] md:gap-12"
-              >
-                <div>
-                  <p className="font-serif text-5xl leading-none text-candle-200/70 tabular-nums" aria-hidden="true">
-                    {String(i + 1).padStart(2, '0')}
-                  </p>
-                  <h3 className="mt-6 text-[clamp(1.75rem,3vw,2.4rem)] leading-tight font-normal">{t.titulo}</h3>
-                </div>
-                <div className="flex flex-col justify-between gap-6">
-                  <p className="text-[1.05rem] leading-relaxed text-moon-100">{t.lead}</p>
-                  <span className="text-candle-200 transition-transform duration-300 group-hover:translate-x-1">
-                    Conocer {t.nombre.toLowerCase()}
-                  </span>
-                </div>
-              </a>
-            </li>
-          ))}
-        </ol>
+    <section aria-label="Buscador" className="relative grid min-h-svh place-items-center overflow-clip py-24">
+      <div aria-hidden="true" className="absolute inset-0">
+        {LUCES.map((st, i) => (
+          <span key={i} className="luciernaga" style={st} />
+        ))}
+      </div>
+      <div className={`${CONTAINER} relative`}>
+        <Buscador id="buscador" grande />
+        <p className="mt-12 text-center text-[0.95rem] text-mist">
+          ¿Prefieres contarlo?{' '}
+          <a href={whatsappUrl()} target="_blank" rel="noopener" className="text-candle-200 underline decoration-1 underline-offset-4 hover:text-starlight">
+            Escríbenos por WhatsApp
+          </a>
+        </p>
       </div>
     </section>
   )
 }
 
-function ParaQuien() {
+/** Del buscador (lo más oscuro) a las tarjetas (más claro, con luces de aurora alrededor). */
+function Amanecer({ children }: { children: ReactNode }) {
   return (
-    <section aria-labelledby="quien-titulo" className={SECTION}>
-      <div className={CONTAINER}>
-        <div className="flex flex-wrap items-end justify-between gap-6">
-          <h2 id="quien-titulo" className={`${H2} max-w-[16ch]`}>
+    <div className="relative overflow-clip bg-[linear-gradient(180deg,var(--color-night-950)_0%,var(--color-night-950)_42%,var(--color-night-850)_72%,var(--color-night-800)_100%)]">
+      <div aria-hidden="true" className="pointer-events-none absolute inset-x-0 bottom-0 h-[60%]">
+        <div className="absolute top-[10%] -left-[10%] size-[36rem] rounded-full bg-aurora-500/20 blur-[120px]" />
+        <div className="absolute top-0 -right-[8%] size-[34rem] rounded-full bg-glacier-500/25 blur-[120px]" />
+        <div className="absolute -right-[4%] bottom-[5%] size-[22rem] rounded-full bg-moon-300/20 blur-[100px]" />
+      </div>
+      {children}
+    </div>
+  )
+}
+
+/* "Para cada etapa y cada vínculo": llega borroso y pequeño, se vuelve nítido y sigue hacia ti hasta atravesar la pantalla */
+function zoom(el: HTMLElement, r: DOMRect, vh: number) {
+  const h = el.querySelector<HTMLElement>('[data-zoom]')
+  if (!h) return
+  const p = Math.min(Math.max((vh - r.top) / (r.height), 0), 1)
+  let scale: number, blur: number, op: number
+  if (p < 0.42) {
+    const e = 1 - (1 - p / 0.42) ** 3
+    scale = 0.45 + 0.55 * e
+    blur = 18 * (1 - e)
+    op = 0.1 + 0.9 * e
+  } else if (p < 0.6) {
+    scale = 1 + (p - 0.42) * 0.4
+    blur = 0
+    op = 1
+  } else {
+    const e = (p - 0.6) / 0.4
+    scale = 1.07 + 3 * e * e
+    blur = 10 * e * e
+    op = 1 - e ** 1.6
+  }
+  h.style.transform = `scale(${scale.toFixed(3)})`
+  h.style.filter = blur > 0.2 ? `blur(${blur.toFixed(1)}px)` : 'none'
+  h.style.opacity = op.toFixed(3)
+}
+
+function ParaQuien() {
+  const ref = useRef<HTMLDivElement>(null)
+  useScrollEffect(ref, zoom)
+  return (
+    <section aria-labelledby="quien-titulo" className="bg-[linear-gradient(180deg,var(--color-night-800)_0%,var(--color-night-900)_30%,var(--color-night-950)_100%)]">
+      <div ref={ref} className="relative motion-safe:h-[240svh]">
+        <div className="sticky top-0 grid h-svh place-items-center overflow-clip px-5">
+          <h2
+            id="quien-titulo"
+            data-zoom
+            className="shine max-w-[13ch] text-center text-[clamp(3rem,9vw,8.5rem)] leading-[0.98] font-normal tracking-[-0.02em] will-change-[transform,filter,opacity]"
+          >
             Para cada etapa y cada vínculo
           </h2>
+        </div>
+      </div>
+      <div className={`${CONTAINER} pb-24 sm:pb-32`}>
+        <div className="flex justify-end">
           <a href={to(HUB_PATH)} className="text-candle-200 underline decoration-1 underline-offset-4 hover:text-starlight">
             Ver todo lo que atendemos
           </a>
         </div>
-        <ul className="mt-12 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+        <ul className="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {byKind('publico').map((s) => (
             <li key={s.slug}>
               <ServicioLink s={s} />
@@ -173,13 +223,19 @@ export function Home() {
   return (
     <>
       <Hero />
-      <Enfoques />
+      <Amanecer>
+        <Busqueda />
+        <Enfoques />
+      </Amanecer>
       <ParaQuien />
-      <Lidia />
-      <Donde />
-      <PreguntasInicio />
-      <Comunidad />
-      <AgendarCta />
+      {/* lo de abajo se maqueta y pinta hasta acercarse a la pantalla */}
+      <div className="[contain-intrinsic-size:auto_3200px] [content-visibility:auto]">
+        <Lidia />
+        <Donde />
+        <PreguntasInicio />
+        <Comunidad />
+        <AgendarCta />
+      </div>
     </>
   )
 }

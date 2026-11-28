@@ -1,6 +1,8 @@
-/* Hallmark · v2.0.0 · theme: custom · idea: "la noche no se apaga, se ilumina: cada panel es un farol de vidrio con una vela dentro" · vibe: "anochecer sereno, auroras, vidrio con luz cálida" · paper: dark (night-950) · accent: candle (cálido) + aurora (frío, solo en el cielo) · faces: Fraunces / Manrope (del proyecto) · posture: dark/roman-serif/warm · job: book · hero: el árbol-luna como luna real del cielo, titular a la izquierda · nav: pill flotante con la firma y "Agendar" · footer: firma grande + aviso de crisis · signature: faroles de vidrio que la luz del cursor enciende */
+/* Hallmark · v2.0.0 · theme: custom · idea: "la noche no se apaga, se ilumina: cada panel es un farol de vidrio con una vela dentro" · vibe: "anochecer sereno, auroras, vidrio con luz cálida" · paper: dark (night-950) · accent: candle (cálido) + aurora (frío, solo en el cielo) · faces: Fraunces / Manrope (del proyecto) · posture: dark/roman-serif/warm · job: book · hero: paisaje nocturno en capas SVG con parallax (aurora, montañas, neblina, árbol en flor), titular centrado entre capas · nav: pill flotante con la firma y "Agendar" · footer: firma grande + aviso de crisis · signature: faroles de vidrio que la luz del cursor enciende */
 /* Hallmark · pre-emit critique: P4 H4 E4 S4 R3 V4 · weakest: R, el cielo animado + faroles pueden sobrar; el cielo queda quieto con reduced-motion y la aurora solo vive arriba */
 /* waive 29: el usuario pidió vidrio iluminado como lámpara; el resplandor y el halo de luna son la idea, no adorno */
+/* waive 2a: el degradado del cielo es el cielo nocturno del hero (azul noche a azul horizonte), no decoración */
+/* waive 2b: texto con brillo pedido por el usuario (hover tipo ShinyText); en reposo es tinta sólida starlight */
 /* waive 26b: :active y :disabled viven en buttonClass (src/lib/ui.ts), que el lint no lee */
 @import 'tailwindcss';
 
@@ -10,6 +12,13 @@
   --color-night-900: #02182b;
   --color-night-800: #0a2540;
   --color-night-700: #12335a;
+  --color-night-850: #05203d; /* transición buscador → tarjetas */
+
+  /* cielo del hero, de arriba al horizonte */
+  --color-sky-950: #06112b;
+  --color-sky-900: #0b1d45;
+  --color-sky-700: #1f3d74;
+  --color-sky-500: #2f5390;
 
   --color-moon-700: #1e4a8c;
   --color-moon-500: #4a63c8;
@@ -25,6 +34,7 @@
   --color-dusk-400: #f2a07b; /* atardecer, acento cálido con moderación */
   --color-candle-500: #f5b971; /* luz de vela: el brillo de los faroles */
   --color-candle-200: #ffe7c2;
+  --color-candle-50: #fffdf6; /* el punto más brillante del destello */
   --color-starlight: #f4f6ff;
   --color-mist: #aeb6d8; /* texto secundario sobre noche (AA) */
 
@@ -179,7 +189,7 @@
 }
 
 .aurora-static {
-  opacity: 0.55;
+  opacity: 0.7;
   background:
     radial-gradient(40% 55% at 25% 10%, color-mix(in oklab, var(--color-aurora-400) 30%, transparent), transparent 70%),
     radial-gradient(35% 45% at 75% 20%, color-mix(in oklab, var(--color-glacier-500) 30%, transparent), transparent 70%);
@@ -199,4 +209,131 @@
 }
 .menu-movil::backdrop {
   background: color-mix(in oklab, var(--color-night-950) 50%, transparent);
+}
+
+/* ───────────── Hero en capas (parallax) ───────────── */
+.capa {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  transform: translate3d(0, calc(var(--sy, 0) * var(--k, 0) * 1px), 0);
+  will-change: transform;
+}
+.capa :is(a, button, h1) { pointer-events: auto; }
+
+.cielo {
+  background:
+    radial-gradient(70% 45% at 50% 78%, color-mix(in oklab, var(--color-sky-500) 70%, transparent), transparent 70%),
+    linear-gradient(180deg, var(--color-sky-950) 0%, var(--color-sky-900) 38%, var(--color-sky-700) 68%, var(--color-sky-500) 100%);
+}
+
+/* Neblina: bandas suaves que derivan despacio entre las montañas */
+.niebla {
+  position: absolute;
+  left: -30%;
+  width: 160%;
+  height: 30%;
+  background:
+    radial-gradient(38% 42% at 18% 55%, color-mix(in oklab, var(--color-moon-100) 34%, transparent), transparent 72%),
+    radial-gradient(34% 40% at 58% 60%, color-mix(in oklab, var(--color-moon-100) 28%, transparent), transparent 72%),
+    radial-gradient(30% 38% at 92% 50%, color-mix(in oklab, var(--color-moon-100) 26%, transparent), transparent 72%),
+    linear-gradient(180deg, transparent 30%, color-mix(in oklab, var(--color-moon-300) 18%, transparent) 65%, transparent);
+}
+
+@keyframes deriva {
+  from { transform: translateX(-8%); }
+  to { transform: translateX(8%); }
+}
+
+/*
+  Letras iluminadas: al pasar el cursor, una franja de luz recorre el texto
+  y lo deja en tono vela (como el botón de agendar).
+*/
+.shine {
+  background-image: linear-gradient(
+    100deg,
+    var(--color-candle-200) 0%,
+    var(--color-candle-200) 34%,
+    var(--color-candle-50) 44%,
+    var(--color-starlight) 54%,
+    var(--color-starlight) 100%
+  );
+  background-size: 280% 100%;
+  background-position: 100% 0;
+  padding-bottom: 0.12em; /* el recorte del texto no corta los descendentes (g, y, p) */
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  transition:
+    background-position 1.3s var(--ease-soft),
+    filter 0.8s var(--ease-soft);
+}
+:is(.shine:hover, .group:hover .shine, .group:focus-visible .shine, .group[data-open] .shine) {
+  background-position: 0 0;
+  filter: drop-shadow(0 0 22px color-mix(in oklab, var(--color-candle-500) 45%, transparent));
+}
+@media (forced-colors: active) {
+  .shine { background: none; -webkit-text-fill-color: currentColor; }
+}
+
+/* Luciérnagas: puntos de luz que suben en la oscuridad del buscador */
+.luciernaga {
+  position: absolute;
+  width: 4px;
+  height: 4px;
+  border-radius: 50%;
+  background: var(--color-candle-200);
+  box-shadow: 0 0 12px 3px color-mix(in oklab, var(--color-candle-500) 60%, transparent);
+  opacity: 0.5;
+}
+@keyframes flotar {
+  0% { transform: translate3d(0, 0, 0); opacity: 0; }
+  20% { opacity: 0.9; }
+  50% { transform: translate3d(var(--dx, 20px), -60px, 0); opacity: 0.4; }
+  80% { opacity: 0.85; }
+  100% { transform: translate3d(0, -120px, 0); opacity: 0; }
+}
+
+/* Destellos de las tarjetas: luces de color que cambian de tono, como aurora */
+.destello {
+  position: absolute;
+  border-radius: 50%;
+  filter: blur(28px);
+  opacity: 0.7;
+}
+@keyframes destello {
+  0%, 100% { transform: translate3d(0, 0, 0) scale(1); opacity: 0.35; }
+  50% { transform: translate3d(var(--dx, 12%), var(--dy, -10%), 0) scale(1.25); opacity: 0.85; }
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  /* solo transform/opacity y capas propias: el compositor anima sin repintar */
+  .niebla { animation: deriva var(--d, 100s) ease-in-out infinite alternate; will-change: transform; }
+  .luciernaga { animation: flotar var(--d, 12s) ease-in-out var(--delay, 0s) infinite; will-change: transform, opacity; }
+  .destello { animation: destello var(--d, 9s) ease-in-out var(--delay, 0s) infinite; will-change: transform, opacity; }
+}
+
+/* Tarjetas que se abren en ventana (View Transitions) */
+.modal-enfoque {
+  max-width: min(60rem, calc(100vw - 1.5rem));
+  max-height: calc(100dvh - 1.5rem);
+  margin: auto;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--color-starlight);
+  overflow: visible;
+}
+.modal-enfoque::backdrop {
+  background: color-mix(in oklab, var(--color-night-950) 70%, transparent);
+  backdrop-filter: blur(6px);
+}
+::view-transition-group(*) {
+  animation-duration: 520ms;
+  animation-timing-function: var(--ease-soft);
+}
+
+/* Con liquid glass activo (Chromium) el tinte baja para que se vea la refracción */
+[data-liquid] {
+  background: color-mix(in oklab, var(--color-night-800) 22%, transparent) !important;
 }
