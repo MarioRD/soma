@@ -222,6 +222,15 @@
 }
 .capa :is(a, button, h1) { pointer-events: auto; }
 
+/* Pantallas verticales: el paisaje (2.4:1) se escala menos para que quepan el árbol completo
+   y más cordillera; arriba queda cielo para el título. */
+@media (max-aspect-ratio: 4/5) {
+  .capa > svg {
+    top: auto;
+    height: 68%;
+  }
+}
+
 .cielo {
   background:
     radial-gradient(70% 45% at 50% 78%, color-mix(in oklab, var(--color-sky-500) 70%, transparent), transparent 70%),
@@ -230,15 +239,18 @@
 
 /* Neblina: bandas suaves que derivan despacio entre las montañas */
 .niebla {
+  /* bandas finas y alargadas: neblina que se arrastra entre las montañas, no un bloque */
   position: absolute;
   left: -30%;
   width: 160%;
-  height: 22%;
+  height: 11%;
   background:
-    radial-gradient(34% 40% at 16% 55%, color-mix(in oklab, var(--color-fog-400) 55%, transparent), transparent 72%),
-    radial-gradient(30% 42% at 52% 60%, color-mix(in oklab, var(--color-fog-400) 60%, transparent), transparent 72%),
-    radial-gradient(32% 40% at 88% 50%, color-mix(in oklab, var(--color-fog-400) 50%, transparent), transparent 72%),
-    linear-gradient(180deg, transparent 15%, color-mix(in oklab, var(--color-fog-400) 32%, transparent) 55%, transparent 95%);
+    radial-gradient(28% 34% at 14% 55%, color-mix(in oklab, var(--color-fog-400) 46%, transparent), transparent 75%),
+    radial-gradient(22% 30% at 36% 45%, color-mix(in oklab, var(--color-fog-400) 34%, transparent), transparent 75%),
+    radial-gradient(30% 36% at 56% 58%, color-mix(in oklab, var(--color-fog-400) 50%, transparent), transparent 75%),
+    radial-gradient(24% 32% at 78% 48%, color-mix(in oklab, var(--color-fog-400) 36%, transparent), transparent 75%),
+    radial-gradient(26% 34% at 94% 56%, color-mix(in oklab, var(--color-fog-400) 44%, transparent), transparent 75%);
+  filter: blur(10px); /* capa propia (will-change): se rasteriza una vez, no en cada cuadro */
 }
 
 @keyframes deriva {
@@ -314,7 +326,7 @@
   .destello { animation: destello var(--d, 9s) ease-in-out var(--delay, 0s) infinite; will-change: transform, opacity; }
 }
 
-/* Tarjetas que se abren en ventana (View Transitions) */
+/* Tarjetas que se abren en ventana (animación FLIP en Enfoques.tsx) */
 .modal-enfoque {
   max-width: min(60rem, calc(100vw - 1.5rem));
   max-height: calc(100dvh - 1.5rem);
@@ -329,9 +341,11 @@
   background: color-mix(in oklab, var(--color-night-950) 70%, transparent);
   backdrop-filter: blur(6px);
 }
-::view-transition-group(*) {
-  animation-duration: 520ms;
-  animation-timing-function: var(--ease-soft);
+@keyframes fundido { from { opacity: 0; } }
+@keyframes desvanecer { to { opacity: 0; } }
+@media (prefers-reduced-motion: no-preference) {
+  .modal-enfoque[open]::backdrop { animation: fundido 450ms var(--ease-soft); }
+  .modal-enfoque.cerrando::backdrop { animation: desvanecer 400ms var(--ease-soft) forwards; }
 }
 
 /* Con liquid glass activo (Chromium) el tinte baja para que se vea la refracción */

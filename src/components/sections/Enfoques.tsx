@@ -11,7 +11,8 @@ import { to } from '@/lib/url'
 
 /**
  * "Tres formas de acompañarte": tarjetas que se abren en una ventana.
- * - La tarjeta se transforma en la ventana con View Transitions (sin librerías); sin soporte, solo aparece.
+ * - La tarjeta crece hasta ser la ventana (FLIP con Web Animations, funciona en todos los navegadores).
+ * - Clic en cualquier parte de la tarjeta la abre; clic en cualquier parte fuera de ella la cierra.
  * - <dialog> nativo: foco atrapado, Esc cierra, el foco vuelve a la tarjeta.
  * - Sin JS, el "+" es un enlace normal a la página dedicada.
  */
@@ -22,35 +23,67 @@ const ILUSTRACION: Record<string, typeof Hipnosis> = {
   'psicoterapia-clinica': Clinica,
 }
 
-const num = (i: number) => String(i + 1).padStart(2, '0')
+/** Color principal de cada tarjeta: tiñe el degradado inferior de la ventana abierta. */
+const COLOR: Record<string, string> = {
+  'hipnosis-ericksoniana': '#7a4ff0',
+  'constelaciones-familiares': '#10b89c',
+  'psicoterapia-clinica': '#1a7fd1',
+}
 
-function transicion(cambio: () => void) {
-  const reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches
-  if (!document.startViewTransition || reduce) return cambio()
-  document.startViewTransition(cambio)
+const num = (i: number) => String(i + 1).padStart(2, '0')
+const quieto = () => window.matchMedia('(prefers-reduced-motion: reduce)').matches
+const EASE = 'cubic-bezier(0.22, 1, 0.36, 1)'
+
+/** FLIP: transforma `panel` desde el rectángulo de `desde` hasta su lugar (o al revés). */
+function morph(panel: HTMLElement, desde: DOMRect, invertir = false) {
+  const hasta = panel.getBoundingClientRect()
+  const inicio = `translate(${desde.left - hasta.left}px, ${desde.top - hasta.top}px) scale(${desde.width / hasta.width}, ${desde.height / hasta.height})`
+  const frames: Keyframe[] = [
+    { transform: inicio, opacity: 0.6, borderRadius: '1.75rem' },
+    { transform: 'none', opacity: 1, borderRadius: '2rem' },
+  ]
+  return panel.animate(invertir ? frames.reverse() : frames, {
+    duration: invertir ? 420 : 560,
+    easing: EASE,
+    fill: 'both',
+  })
 }
 
 export function Enfoques() {
   const enfoques = byKind('enfoque')
   const [abierto, setAbierto] = useState<Servicio | null>(null)
   const dlg = useRef<HTMLDialogElement>(null)
+  const panel = useRef<HTMLDivElement>(null)
+  const origen = useRef<HTMLElement | null>(null)
+  const cerrando = useRef(false)
 
   function abrir(e: MouseEvent, s: Servicio) {
     if (e.metaKey || e.ctrlKey || e.shiftKey || e.button !== 0) return // abrir en pestaña nueva sigue funcionando
     e.preventDefault()
-    transicion(() => {
-      flushSync(() => setAbierto(s))
-      dlg.current?.showModal()
-      pausarScroll(true)
-    })
+    origen.current = (e.currentTarget as HTMLElement).closest('article')
+    flushSync(() => setAbierto(s))
+    dlg.current?.showModal()
+    pausarScroll(true)
+    const p = panel.current
+    if (!p || !origen.current || quieto()) return
+    morph(p, origen.current.getBoundingClientRect())
+    p.querySelector<HTMLElement>('[data-contenido]')?.animate([{ opacity: 0 }, { opacity: 1 }], { duration: 380, delay: 200, easing: EASE, fill: 'both' })
   }
 
-  function cerrar() {
-    transicion(() => {
-      dlg.current?.close()
-      flushSync(() => setAbierto(null))
-      pausarScroll(false)
-    })
+  async function cerrar() {
+    if (cerrando.current) return
+    cerrando.current = true
+    const p = panel.current
+    if (p && origen.current && !quieto()) {
+      p.querySelector<HTMLElement>('[data-contenido]')?.animate([{ opacity: 1 }, { opacity: 0 }], { duration: 160, fill: 'both' })
+      dlg.current?.classList.add('cerrando')
+      await morph(p, origen.current.getBoundingClientRect(), true).finished.catch(() => {})
+    }
+    dlg.current?.classList.remove('cerrando')
+    dlg.current?.close()
+    setAbierto(null)
+    pausarScroll(false)
+    cerrando.current = false
   }
 
   const i = abierto ? enfoques.indexOf(abierto) : -1
@@ -61,7 +94,7 @@ export function Enfoques() {
       <div className={CONTAINER}>
         <h2
           id="enfoques-titulo"
-          className="shine mx-auto max-w-[20ch] text-center text-[clamp(2.2rem,4.4vw,3.75rem)] leading-[1.05] font-normal"
+          className="shine mx-auto max-w-[30ch] text-center text-[clamp(2.2rem,4.4vw,3.75rem)] leading-[1.05] font-normal"
         >
           Tres formas de acompañarte, una misma calma
         </h2>
@@ -71,8 +104,8 @@ export function Enfoques() {
             return (
               <li key={s.slug}>
                 <article
-                  className="group lantern flex aspect-[4/3] flex-col justify-end overflow-hidden rounded-[1.75rem] md:aspect-[4/5] lg:aspect-[5/6]"
-                  style={{ viewTransitionName: abierto?.slug === s.slug ? 'none' : `enfoque-${s.slug}` }}
+                  className="group lantern flex aspect-[4/3] cursor-pointer flex-col justify-end overflow-hidden rounded-[1.75rem] md:aspect-[4/5] lg:aspect-[5/6]"
+                  style={{ visibility: abierto?.slug === s.slug ? 'hidden' : undefined }}
                 >
                   {/* capas visuales detrás (z negativo dentro del farol aislado): el enlace "+" cubre toda la tarjeta */}
                   <div className="absolute inset-0 -z-10">
@@ -92,11 +125,15 @@ export function Enfoques() {
                       onClick={(e) => abrir(e, s)}
                       aria-label={`Ver más sobre ${s.titulo.toLowerCase()}`}
                       aria-haspopup="dialog"
-                      className="glass grid size-11 shrink-0 place-items-center rounded-full text-starlight transition-[transform,background-color] duration-300 group-hover:rotate-90 group-hover:bg-starlight/15 after:absolute after:inset-0 after:rounded-[inherit] after:content-['']"
+                      className="block shrink-0 rounded-full text-starlight after:absolute after:inset-0 after:rounded-[1.75rem] after:content-['']"
                     >
-                      <svg aria-hidden="true" viewBox="0 0 24 24" className="size-5">
-                        <path d="M12 5v14M5 12h14" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
-                      </svg>
+                      {/* el vidrio va en un span: backdrop-filter o transform en el enlace encerrarían su área
+                          clicable (::after, que cubre toda la tarjeta) dentro del botón */}
+                      <span className="glass grid size-11 place-items-center rounded-full transition-colors duration-300 group-hover:bg-starlight/15">
+                        <svg aria-hidden="true" viewBox="0 0 24 24" className="size-5 transition-transform duration-300 group-hover:rotate-90">
+                          <path d="M12 5v14M5 12h14" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
+                        </svg>
+                      </span>
                     </a>
                   </div>
                 </article>
@@ -115,19 +152,29 @@ export function Enfoques() {
           cerrar()
         }}
         onClick={(e) => {
-          if (e.target === e.currentTarget) cerrar()
+          // cualquier clic fuera de la tarjeta abierta la cierra
+          const r = panel.current?.getBoundingClientRect()
+          if (!r) return
+          const fuera = e.clientX < r.left || e.clientX > r.right || e.clientY < r.top || e.clientY > r.bottom
+          if (fuera) cerrar()
         }}
       >
         {abierto && Ilus && (
           <div
-            className="lantern grid max-h-[calc(100dvh-1.5rem)] overflow-hidden rounded-[2rem] md:grid-cols-[minmax(0,0.9fr)_minmax(0,1.1fr)]"
-            style={{ viewTransitionName: `enfoque-${abierto.slug}` }}
+            ref={panel}
+            className="lantern grid max-h-[calc(100dvh-1.5rem)] origin-top-left overflow-hidden rounded-[2rem] md:grid-cols-[minmax(0,0.9fr)_minmax(0,1.1fr)]"
           >
+            {/* degradado inferior con el color de la tarjeta (morado, verde o azul) */}
+            <div
+              aria-hidden="true"
+              className="pointer-events-none absolute inset-x-0 bottom-0 -z-10 h-2/3"
+              style={{ background: `linear-gradient(to top, color-mix(in oklab, ${COLOR[abierto.slug]} 55%, transparent), color-mix(in oklab, ${COLOR[abierto.slug]} 18%, transparent) 45%, transparent)` }}
+            />
             <div className="relative aspect-[16/10] overflow-hidden md:aspect-auto md:min-h-[28rem]">
               <Destellos tonos={TONOS[abierto.slug]} />
               <Ilus className="absolute inset-0 size-full" />
             </div>
-            <div className="flex flex-col gap-5 overflow-y-auto p-7 sm:p-10">
+            <div data-contenido className="flex flex-col gap-5 overflow-y-auto p-7 sm:p-10">
               <p className="font-serif text-lg text-candle-200/80 tabular-nums" aria-hidden="true">
                 {num(i)}
               </p>

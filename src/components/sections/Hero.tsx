@@ -82,11 +82,14 @@ export function Hero() {
         )}
       </div>
 
-      <Capa k={0.76} id="lejanas" />
-      <Niebla k={0.7} top="34%" d="110s" />
+      {/* k más separados entre capas = parallax más notorio (también en celular) */}
+      <Capa k={0.86} id="lejanas" />
+      <Niebla k={0.8} top="30%" d="120s" className="opacity-60" />
+      <Capa k={0.7} id="cordillera" />
+      <Niebla k={0.64} top="40%" d="110s" className="opacity-80" />
 
-      {/* el titular vive entre las montañas lejanas y las laderas: al bajar, el paisaje pasa por delante */}
-      <div className="capa grid justify-items-center px-5 pt-[clamp(6.5rem,19svh,11rem)]" style={{ '--k': 0.56 } as CSSProperties}>
+      {/* el titular vive entre las cordilleras y las laderas: al bajar, el paisaje pasa por delante */}
+      <div className="capa grid justify-items-center px-5 pt-[clamp(6.5rem,19svh,11rem)]" style={{ '--k': 0.6 } as CSSProperties}>
         <h1
           id="titulo"
           className="shine rise h-fit max-w-[16ch] text-center text-[clamp(2.6rem,6.2vw,5.25rem)] leading-[1.02] font-normal tracking-[-0.02em]"
@@ -95,12 +98,12 @@ export function Hero() {
         </h1>
       </div>
 
-      <Capa k={0.56} id="laderas" />
-      <Niebla k={0.46} top="46%" d="80s" />
-      <Capa k={0.36} id="bosque" />
-      <Niebla k={0.26} top="60%" d="140s" />
+      <Capa k={0.5} id="laderas" />
+      <Niebla k={0.46} top="50%" d="80s" />
+      <Capa k={0.32} id="bosque" />
+      <Niebla k={0.26} top="63%" d="140s" />
       <Capa k={0.16} id="cercanas" />
-      <Niebla k={0.1} top="68%" d="95s" className="opacity-70" />
+      <Niebla k={0.1} top="71%" d="95s" className="opacity-60" />
       <Capa k={0} id="primerPlano" className="text-night-950" />
 
       {/* texto del primer plano: se mueve con la página */}

@@ -7,7 +7,7 @@
  * x = 186 + x_diseño·2·1.178, y = y_diseño·2·1.178 — en pantallas más anchas se ve más paisaje.
  * Todo es determinista. Se calcula solo al prerenderizar; el navegador recibe el SVG en el HTML.
  */
-import { ARBOL_D, ARBOL_H } from './arbol-marca'
+import { ARBOL_D, ARBOL_H, ROCA } from './arbol-marca'
 
 // Mismas medidas que VIEWBOX en Hero.tsx
 const W = 2200
@@ -28,7 +28,7 @@ function rng(seed: number) {
 const i0 = (n: number) => Math.round(n).toString()
 
 /** Cresta suave entre puntos de control (interpolación coseno) + un poco de ruido. */
-function cresta(puntos: [number, number][], seed: number, ruido: number) {
+function cresta(puntos: [number, number][], seed: number, ruido: number, recta = false) {
   const pts = puntos.map(([x, y]) => [X(x), Y(y)] as const)
   const r = rng(seed)
   const ondas = Array.from({ length: 3 }, (_, i) => ({ k: 0.012 * (i + 1) ** 1.6, p: r() * 6.28, a: ruido / (i + 1) }))
@@ -38,7 +38,7 @@ function cresta(puntos: [number, number][], seed: number, ruido: number) {
     const [x0, y0] = pts[i]
     const [x1, y1] = pts[i + 1]
     const t = Math.min(1, Math.max(0, (x - x0) / (x1 - x0 || 1)))
-    const c = (1 - Math.cos(t * Math.PI)) / 2
+    const c = recta ? t : (1 - Math.cos(t * Math.PI)) / 2
     return y0 + (y1 - y0) * c + ondas.reduce((s, o) => s + o.a * Math.sin(x * o.k + o.p), 0)
   }
 }
@@ -70,13 +70,15 @@ function capa(o: {
   puntos: [number, number][]
   seed: number
   ruido?: number
+  recta?: boolean
+  corte?: number
   color: string
   niebla: string
   arriba: number
   abajo: number
   bosques?: Bosque[]
 }) {
-  const y = cresta(o.puntos, o.seed, o.ruido ?? 4)
+  const y = cresta(o.puntos, o.seed, o.ruido ?? 4, o.recta)
   let d = `M-20 ${H}`
   for (let x = -20; x <= W + 20; x += 8) d += `L${x} ${i0(y(x))}`
   d += `L${W + 20} ${H}Z`
@@ -90,25 +92,46 @@ function capa(o: {
   }
   return (
     `<defs><linearGradient id="${o.id}" gradientUnits="userSpaceOnUse" x1="0" y1="${i0(Y(o.arriba))}" x2="0" y2="${i0(Y(o.abajo))}">` +
-    `<stop offset="0" stop-color="${o.color}"/><stop offset=".55" stop-color="${o.color}"/><stop offset="1" stop-color="${o.niebla}"/></linearGradient></defs>` +
+    `<stop offset="0" stop-color="${o.color}"/><stop offset="${o.corte ?? 0.55}" stop-color="${o.color}"/><stop offset="1" stop-color="${o.niebla}"/></linearGradient></defs>` +
     `<path fill="url(#${o.id})" d="${d}"/>`
   )
 }
 
 /* ───────────── Capas (de atrás hacia adelante) ───────────── */
 
+// Lo más lejano es lo más claro (perspectiva atmosférica): picos grandes contra el cielo
 const lejanas = () =>
   capa({
     id: 'g-lejanas',
     seed: 11,
-    ruido: 3,
-    color: '#0e2a4f',
-    niebla: '#2f6ca3',
-    arriba: 240,
+    ruido: 1.5,
+    recta: true, // picos marcados, como en el diseño
+    corte: 0.8,
+    color: '#1b3f70',
+    niebla: '#2a5f96',
+    arriba: 150,
     abajo: 360,
     puntos: [
-      [-200, 300], [0, 285], [100, 262], [220, 242], [330, 282], [430, 300], [530, 325], [640, 345],
-      [780, 352], [950, 338], [1080, 296], [1180, 302], [1300, 262], [1380, 245], [1480, 275], [1552, 286], [1760, 300],
+      [-200, 250], [-60, 205], [60, 170], [150, 196], [220, 150], [330, 214], [420, 238], [520, 205], [600, 236], [700, 270],
+      [800, 250], [880, 226], [960, 262], [1060, 214], [1160, 176], [1230, 204], [1330, 140], [1420, 188], [1500, 172], [1600, 216], [1760, 236],
+    ],
+  })
+
+// Segunda cordillera, más cercana y oscura; con picos también al centro (lo que se ve en celular)
+const cordillera = () =>
+  capa({
+    id: 'g-cordillera',
+    seed: 17,
+    ruido: 2,
+    recta: true,
+    corte: 0.7,
+    color: '#0e2a4f',
+    niebla: '#2f6ca3',
+    arriba: 220,
+    abajo: 400,
+    puntos: [
+      [-200, 320], [-40, 290], [90, 250], [200, 292], [300, 272], [400, 312], [520, 288], [640, 250], [720, 276],
+      [800, 236], [890, 282], [980, 300], [1080, 262], [1180, 296], [1280, 270], [1400, 232], [1500, 268], [1600, 290], [1760, 300],
     ],
   })
 
@@ -212,19 +235,42 @@ function planta(x: number, y: number, alto: number, r: () => number, lado: numbe
   return d
 }
 
+// árbol de la marca: base del tronco en x=790, y=655 del diseño; ancho ≈ 600 px del diseño
+const ARBOL_S = 0.74 // el trazo está a la mitad de resolución
+const ARBOL_TX = X(790) - 463 * ARBOL_S
+const ARBOL_TY = Y(655) - ARBOL_H * ARBOL_S
+
+/** Roca del logo bajo el árbol, con laderas suaves a los lados para unirse al suelo. */
+function roca() {
+  const pts = ROCA.map(([x, y]) => [ARBOL_TX + x * ARBOL_S, ARBOL_TY + y * ARBOL_S] as const)
+  const [x0, y0] = pts[0]
+  const [x1, y1] = pts[pts.length - 1]
+  return (x: number) => {
+    if (x <= x0) return y0 + (x0 - x) * 0.32
+    if (x >= x1) return y1 + (x - x1) * 0.32
+    let i = 0
+    while (x > pts[i + 1][0]) i++
+    const [ax, ay] = pts[i]
+    const [bx, by] = pts[i + 1]
+    return ay + ((by - ay) * (x - ax)) / (bx - ax)
+  }
+}
+
 function primerPlano() {
   const r = rng(91)
-  // loma: baja a los lados del árbol y sube en las esquinas, donde crecen las plantas
-  const suelo = cresta(
+  // loma: baja hacia el centro (ahí manda la roca del logo) y sube en las esquinas, donde crecen las plantas
+  const base = cresta(
     [
-      [-200, 640], [0, 650], [140, 690], [320, 735], [460, 700], [620, 664], [790, 652], [930, 662],
-      [1080, 690], [1200, 715], [1330, 690], [1460, 640], [1552, 620], [1760, 610],
+      [-200, 640], [0, 650], [140, 690], [320, 735], [460, 735], [620, 740], [790, 740], [930, 742],
+      [1080, 740], [1200, 725], [1330, 690], [1460, 640], [1552, 620], [1760, 610],
     ],
     5,
     2,
   )
+  const laRoca = roca()
+  const suelo = (x: number) => Math.min(base(x), laRoca(x))
   let d = `M-20 ${H}`
-  for (let x = -20; x <= W + 20; x += 12) d += `L${x} ${i0(suelo(x))}`
+  for (let x = -20; x <= W + 20; x += 6) d += `L${x} ${i0(suelo(x))}`
   d += `L${W + 20} ${H}Z`
 
   // pasto
@@ -244,17 +290,13 @@ function primerPlano() {
   for (const [x, alto] of izq) d += planta(X(x), suelo(X(x)) + 10, alto * K, r, 1)
   for (const [x, alto] of der) d += planta(X(x), suelo(X(x)) + 10, alto * K, r, -1)
 
-  // árbol de la marca: base del tronco en x=790, y=655 del diseño; ancho ≈ 600 px del diseño
-  const s = 0.74 // el trazo está a la mitad de resolución
-  const tx = X(790) - 463 * s
-  const ty = Y(655) - ARBOL_H * s
   return (
     `<path fill="currentColor" d="${d}"/>` +
-    `<path fill="currentColor" fill-rule="evenodd" transform="translate(${i0(tx)} ${i0(ty)}) scale(${s})" d="${ARBOL_D}"/>`
+    `<path fill="currentColor" fill-rule="evenodd" transform="translate(${i0(ARBOL_TX)} ${i0(ARBOL_TY)}) scale(${ARBOL_S})" d="${ARBOL_D}"/>`
   )
 }
 
-const GENERA = { lejanas, laderas, bosque, cercanas, primerPlano }
+const GENERA = { lejanas, cordillera, laderas, bosque, cercanas, primerPlano }
 export type CapaId = keyof typeof GENERA
 const cache: Partial<Record<CapaId, string>> = {}
 
