@@ -34,19 +34,22 @@ const num = (i: number) => String(i + 1).padStart(2, '0')
 const quieto = () => window.matchMedia('(prefers-reduced-motion: reduce)').matches
 const EASE = 'cubic-bezier(0.22, 1, 0.36, 1)'
 
-/** FLIP: transforma `panel` desde el rectángulo de `desde` hasta su lugar (o al revés). */
-function morph(panel: HTMLElement, desde: DOMRect, invertir = false) {
-  const hasta = panel.getBoundingClientRect()
-  const inicio = `translate(${desde.left - hasta.left}px, ${desde.top - hasta.top}px) scale(${desde.width / hasta.width}, ${desde.height / hasta.height})`
-  const frames: Keyframe[] = [
-    { transform: inicio, opacity: 0.6, borderRadius: '1.75rem' },
-    { transform: 'none', opacity: 1, borderRadius: '2rem' },
-  ]
-  return panel.animate(invertir ? frames.reverse() : frames, {
-    duration: invertir ? 420 : 560,
-    easing: EASE,
-    fill: 'both',
-  })
+/** FLIP: la ventana crece desde el rectángulo de la tarjeta, o se encoge hacia él y se desvanece. */
+function morph(panel: HTMLElement, tarjeta: DOMRect, cerrar = false) {
+  const aqui = panel.getBoundingClientRect()
+  const alla = `translate(${tarjeta.left - aqui.left}px, ${tarjeta.top - aqui.top}px) scale(${tarjeta.width / aqui.width}, ${tarjeta.height / aqui.height})`
+  const frames: Keyframe[] = cerrar
+    ? // al cerrar el contenido viaja con la ventana (no queda un panel vacío) y se funde con la tarjeta al final
+      [
+        { transform: 'none', opacity: 1 },
+        { transform: alla, opacity: 1, offset: 0.75 },
+        { transform: alla, opacity: 0 },
+      ]
+    : [
+        { transform: alla, opacity: 0.6, borderRadius: '1.75rem' },
+        { transform: 'none', opacity: 1, borderRadius: '2rem' },
+      ]
+  return panel.animate(frames, { duration: cerrar ? 460 : 560, easing: EASE, fill: 'both' })
 }
 
 export function Enfoques() {
@@ -75,12 +78,13 @@ export function Enfoques() {
     cerrando.current = true
     const p = panel.current
     if (p && origen.current && !quieto()) {
-      p.querySelector<HTMLElement>('[data-contenido]')?.animate([{ opacity: 1 }, { opacity: 0 }], { duration: 160, fill: 'both' })
+      origen.current.style.visibility = 'visible' // la tarjeta ya está en su lugar, debajo de la ventana que regresa
       dlg.current?.classList.add('cerrando')
       await morph(p, origen.current.getBoundingClientRect(), true).finished.catch(() => {})
     }
     dlg.current?.classList.remove('cerrando')
     dlg.current?.close()
+    origen.current?.style.removeProperty('visibility')
     setAbierto(null)
     pausarScroll(false)
     cerrando.current = false

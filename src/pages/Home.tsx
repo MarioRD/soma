@@ -71,8 +71,8 @@ function zoom(el: HTMLElement, r: DOMRect, vh: number) {
   let scale: number, blur: number, op: number
   if (p < 0.42) {
     const e = 1 - (1 - p / 0.42) ** 3
-    scale = 0.45 + 0.55 * e
-    blur = 18 * (1 - e)
+    scale = 0.6 + 0.4 * e
+    blur = 14 * (1 - e)
     op = 0.1 + 0.9 * e
   } else if (p < 0.6) {
     scale = 1 + (p - 0.42) * 0.4
@@ -80,8 +80,8 @@ function zoom(el: HTMLElement, r: DOMRect, vh: number) {
     op = 1
   } else {
     const e = (p - 0.6) / 0.4
-    scale = 1.07 + 3 * e * e
-    blur = 10 * e * e
+    scale = 1.07 + 1.4 * e * e
+    blur = 8 * e * e
     op = 1 - e ** 1.6
   }
   h.style.transform = `scale(${scale.toFixed(3)})`
@@ -99,7 +99,7 @@ function ParaQuien() {
           <h2
             id="quien-titulo"
             data-zoom
-            className="shine max-w-[13ch] text-center text-[clamp(3rem,9vw,8.5rem)] leading-[0.98] font-normal tracking-[-0.02em] will-change-[transform,filter,opacity]"
+            className="shine max-w-[16ch] text-center text-[clamp(2.2rem,5.4vw,4.75rem)] leading-[1.04] font-normal tracking-[-0.015em] will-change-[transform,filter,opacity]"
           >
             Para cada etapa y cada vínculo
           </h2>
