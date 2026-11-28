@@ -27,7 +27,7 @@ void main(){
   float x=uv.x;
   // cortina principal: cresta ondulante que se mueve, con rayos verticales
   float n1=fbm(vec2(x*2.4+t*.05,t*.035));
-  float base=.42+.13*sin(x*3.4+t*.16+n1*3.)+.07*(n1-.5);
+  float base=.54+.12*sin(x*3.4+t*.16+n1*3.)+.07*(n1-.5);
   float d=uv.y-base;
   float body=smoothstep(-.05,.0,d)*exp(-max(d,0.)*4.2);
   float rays=.35+.65*fb3(vec2(x*26.+n1*5.+t*.22,d*1.4-t*.06));

@@ -1,13 +1,21 @@
 /**
- * Paisaje del hero dibujado con código: montañas, pinos, árbol en flor y pasto.
- * Todo es determinista (semilla fija): el servidor y el cliente producen el mismo SVG.
- * Cada capa devuelve el contenido interno de un <svg viewBox="0 0 2200 900">.
+ * Paisaje del hero en capas, dibujado con código sobre la composición del diseño de Figma:
+ * siluetas oscuras de montaña cuya base se funde en neblina azul brillante, pinos en los
+ * costados, loma al frente con plantas en las esquinas y el árbol de la marca (vectorizado).
+ *
+ * Coordenadas: viewBox 2200 × 900. El diseño (776 × 382 px) ocupa el centro:
+ * x = 186 + x_diseño·2·1.178, y = y_diseño·2·1.178 — en pantallas más anchas se ve más paisaje.
+ * Todo es determinista. Se calcula solo al prerenderizar; el navegador recibe el SVG en el HTML.
  */
+import { ARBOL_D, ARBOL_H } from './arbol-marca'
 
-// Ancho de sobra (2.4:1): en pantallas anchas no hay que escalar y el titular no choca con el árbol
-export const W = 2200
-const CX = W / 2
-export const H = 900
+// Mismas medidas que VIEWBOX en Hero.tsx
+const W = 2200
+const H = 900
+
+const K = 1.178
+const X = (x: number) => 186 + x * K // x del diseño al doble de tamaño (0–1552)
+const Y = (y: number) => y * K // y del diseño al doble de tamaño (0–764)
 
 function rng(seed: number) {
   let s = seed
@@ -17,183 +25,240 @@ function rng(seed: number) {
   }
 }
 
-const f = (n: number) => (Math.round(n * 10) / 10).toString()
 const i0 = (n: number) => Math.round(n).toString()
 
-/** Ruido 1D suave (suma de senos con fases aleatorias): crestas naturales sin librerías. */
-function ridgeFn(seed: number, amp: number, freq: number) {
+/** Cresta suave entre puntos de control (interpolación coseno) + un poco de ruido. */
+function cresta(puntos: [number, number][], seed: number, ruido: number) {
+  const pts = puntos.map(([x, y]) => [X(x), Y(y)] as const)
   const r = rng(seed)
-  const waves = Array.from({ length: 5 }, (_, i) => ({
-    a: amp / (i + 1) ** 1.25,
-    k: freq * (i + 1) ** 1.7 * (0.8 + r() * 0.4),
-    p: r() * Math.PI * 2,
-  }))
-  return (x: number) => waves.reduce((y, w) => y + w.a * Math.sin(x * w.k + w.p), 0)
-}
-
-function pine(x: number, y: number, h: number) {
-  const tiers = 3
-  const w = h * 0.3
-  const right: string[] = []
-  const left: string[] = []
-  for (let i = 1; i <= tiers; i++) {
-    const ty = y - h + (h * 0.9 * i) / tiers
-    const wi = (w * i) / tiers
-    right.push(`L${i0(x + wi)} ${i0(ty)}`)
-    if (i < tiers) right.push(`L${i0(x + wi * 0.3)} ${i0(ty - h * 0.05)}`)
-    left.unshift(`L${i0(x - wi)} ${i0(ty)}`)
-    if (i < tiers) left.unshift(`L${i0(x - wi * 0.3)} ${i0(ty - h * 0.05)}`)
+  const ondas = Array.from({ length: 3 }, (_, i) => ({ k: 0.012 * (i + 1) ** 1.6, p: r() * 6.28, a: ruido / (i + 1) }))
+  return (x: number) => {
+    let i = 0
+    while (i < pts.length - 2 && x > pts[i + 1][0]) i++
+    const [x0, y0] = pts[i]
+    const [x1, y1] = pts[i + 1]
+    const t = Math.min(1, Math.max(0, (x - x0) / (x1 - x0 || 1)))
+    const c = (1 - Math.cos(t * Math.PI)) / 2
+    return y0 + (y1 - y0) * c + ondas.reduce((s, o) => s + o.a * Math.sin(x * o.k + o.p), 0)
   }
-  return `M${i0(x)} ${i0(y - h)}${right.join('')}L${i0(x)} ${i0(y + 2)}${left.join('')}Z`
 }
 
-type Capa = {
+function pino(x: number, y: number, h: number) {
+  const w = h * 0.26
+  const n = 3
+  const der: string[] = []
+  const izq: string[] = []
+  for (let i = 1; i <= n; i++) {
+    const ty = y - h + (h * 0.92 * i) / n
+    const wi = (w * i) / n
+    der.push(`L${i0(x + wi)} ${i0(ty)}`)
+    if (i < n) der.push(`L${i0(x + wi * 0.35)} ${i0(ty - h * 0.04)}`)
+    izq.unshift(`L${i0(x - wi)} ${i0(ty)}`)
+    if (i < n) izq.unshift(`L${i0(x - wi * 0.35)} ${i0(ty - h * 0.04)}`)
+  }
+  return `M${i0(x)} ${i0(y - h)}${der.join('')}L${i0(x)} ${i0(y + 4)}${izq.join('')}Z`
+}
+
+type Bosque = { desde: number; hasta: number; n: number; min: number; max: number }
+
+/**
+ * Capa de montaña: silueta con degradado vertical (oscuro arriba → neblina abajo).
+ * `arriba`/`abajo` = alturas (en y del diseño) donde empieza y termina el degradado.
+ */
+function capa(o: {
+  id: string
+  puntos: [number, number][]
   seed: number
-  base: number // altura media de la cresta (0 arriba, 900 abajo)
-  amp: number
-  freq: number
-  fill: string
-  pinos?: { n: number; min: number; max: number; zonas?: [number, number][] }
-}
-
-function capa({ seed, base, amp, freq, fill, pinos }: Capa) {
-  const y = ridgeFn(seed, amp, freq)
-  let d = `M-40 ${H}`
-  for (let x = -40; x <= W + 40; x += 10) d += `L${x} ${i0(base + y(x))}`
-  d += `L${W + 40} ${H}Z`
-  let p = ''
-  if (pinos) {
-    const r = rng(seed * 3 + 1)
-    for (let i = 0; i < pinos.n; i++) {
-      const zona = pinos.zonas ? pinos.zonas[i % pinos.zonas.length] : [0, W]
-      const x = zona[0] + r() * (zona[1] - zona[0])
-      const h = pinos.min + r() * (pinos.max - pinos.min)
-      p += pine(x, base + y(x) + h * 0.18, h)
+  ruido?: number
+  color: string
+  niebla: string
+  arriba: number
+  abajo: number
+  bosques?: Bosque[]
+}) {
+  const y = cresta(o.puntos, o.seed, o.ruido ?? 4)
+  let d = `M-20 ${H}`
+  for (let x = -20; x <= W + 20; x += 8) d += `L${x} ${i0(y(x))}`
+  d += `L${W + 20} ${H}Z`
+  const r = rng(o.seed * 7 + 3)
+  for (const b of o.bosques ?? []) {
+    for (let i = 0; i < b.n; i++) {
+      const x = X(b.desde) + r() * (X(b.hasta) - X(b.desde))
+      const h = b.min + r() * (b.max - b.min)
+      d += pino(x, y(x) + h * 0.12, h)
     }
   }
-  return `<path fill="${fill}" d="${d}${p}"/>`
+  return (
+    `<defs><linearGradient id="${o.id}" gradientUnits="userSpaceOnUse" x1="0" y1="${i0(Y(o.arriba))}" x2="0" y2="${i0(Y(o.abajo))}">` +
+    `<stop offset="0" stop-color="${o.color}"/><stop offset=".55" stop-color="${o.color}"/><stop offset="1" stop-color="${o.niebla}"/></linearGradient></defs>` +
+    `<path fill="url(#${o.id})" d="${d}"/>`
+  )
 }
 
-/* Capas de atrás hacia adelante: más lejos = más clara y más brumosa */
-const lejanas = () => capa({ seed: 11, base: 470, amp: 90, freq: 0.004, fill: '#36588c' })
-const medias = () =>
+/* ───────────── Capas (de atrás hacia adelante) ───────────── */
+
+const lejanas = () =>
   capa({
-  seed: 23,
-  base: 560,
-  amp: 70,
-  freq: 0.005,
-  fill: '#27467a',
-  pinos: { n: 70, min: 16, max: 34, zonas: [[-20, 820], [1380, 2220]] },
-})
+    id: 'g-lejanas',
+    seed: 11,
+    ruido: 3,
+    color: '#0e2a4f',
+    niebla: '#2f6ca3',
+    arriba: 240,
+    abajo: 360,
+    puntos: [
+      [-200, 300], [0, 285], [100, 262], [220, 242], [330, 282], [430, 300], [530, 325], [640, 345],
+      [780, 352], [950, 338], [1080, 296], [1180, 302], [1300, 262], [1380, 245], [1480, 275], [1552, 286], [1760, 300],
+    ],
+  })
+
+const laderas = () =>
+  capa({
+    id: 'g-laderas',
+    seed: 23,
+    ruido: 5,
+    color: '#082746',
+    niebla: '#2a6197',
+    arriba: 300,
+    abajo: 500,
+    puntos: [
+      [-200, 330], [0, 335], [110, 352], [260, 392], [420, 440], [560, 478], [700, 505], [860, 510],
+      [1000, 480], [1150, 420], [1300, 380], [1430, 352], [1552, 335], [1760, 330],
+    ],
+    bosques: [
+      { desde: -160, hasta: 330, n: 46, min: 28, max: 78 },
+      { desde: 1240, hasta: 1720, n: 46, min: 28, max: 78 },
+    ],
+  })
+
 const bosque = () =>
   capa({
-  seed: 37,
-  base: 650,
-  amp: 40,
-  freq: 0.006,
-  fill: '#1a3460',
-  pinos: { n: 120, min: 26, max: 58 },
-})
+    id: 'g-bosque',
+    seed: 37,
+    ruido: 6,
+    color: '#092847',
+    niebla: '#3a74a8',
+    arriba: 400,
+    abajo: 620,
+    puntos: [
+      [-200, 410], [0, 420], [180, 432], [330, 470], [460, 525], [600, 585], [760, 610], [900, 590],
+      [1020, 545], [1160, 495], [1320, 445], [1450, 400], [1552, 382], [1760, 380],
+    ],
+    bosques: [
+      { desde: -180, hasta: 620, n: 62, min: 22, max: 56 },
+      { desde: 940, hasta: 1740, n: 62, min: 22, max: 56 },
+    ],
+  })
+
 const cercanas = () =>
   capa({
-  seed: 41,
-  base: 740,
-  amp: 46,
-  freq: 0.0045,
-  fill: '#0f2445',
-  pinos: { n: 34, min: 70, max: 150, zonas: [[-30, 720], [1480, 2230]] },
-})
+    id: 'g-cercanas',
+    seed: 41,
+    ruido: 5,
+    color: '#0a2644',
+    niebla: '#23527a',
+    arriba: 480,
+    abajo: 700,
+    puntos: [
+      [-200, 500], [0, 520], [160, 535], [320, 570], [470, 625], [600, 660], [1000, 668], [1120, 630],
+      [1250, 575], [1400, 520], [1552, 480], [1760, 470],
+    ],
+    bosques: [
+      { desde: -180, hasta: 420, n: 40, min: 30, max: 70 },
+      { desde: 1180, hasta: 1740, n: 44, min: 30, max: 76 },
+    ],
+  })
 
-/* ───────────── Primer plano: loma, árbol en flor y pasto ───────────── */
+/* ───────────── Primer plano: loma, plantas, pasto y el árbol de la marca ───────────── */
 
-function arbol() {
-  const r = rng(5)
-  const ramas: { d: string; w: number }[] = []
-  // flores: puntos con trazo redondo (M x y h0), agrupados por tamaño. Muy pocos bytes por flor.
-  const flores = new Map<number, string>()
-  const punto = (x: number, y: number, d: number) => {
-    const k = Math.max(4, Math.min(12, Math.round(d)))
-    flores.set(k, (flores.get(k) ?? '') + `M${i0(x)} ${i0(y)}h0`)
-  }
-  const flor = (x: number, y: number, s: number) => {
-    punto(x, y, s * 2)
-    for (let n = 0; n < 3; n++) if (r() < 0.6) punto(x + (r() - 0.5) * s * 5, y + (r() - 0.6) * s * 4, s * (1 + r()))
-  }
-
-  const MIN = 0.12 * Math.PI // las ramas nunca apuntan hacia abajo
-  const MAX = 0.88 * Math.PI
-  const rama = (x: number, y: number, ang: number, len: number, w: number, depth: number) => {
-    ang = Math.min(MAX, Math.max(MIN, ang))
-    const x2 = x + Math.cos(ang) * len
-    const y2 = y - Math.sin(ang) * len
-    const bend = (r() - 0.5) * len * 0.3
-    const cx = (x + x2) / 2 + Math.sin(ang) * bend
-    const cy = (y + y2) / 2 + Math.cos(ang) * bend
-    ramas.push({ d: `M${i0(x)} ${i0(y)}Q${i0(cx)} ${i0(cy)} ${i0(x2)} ${i0(y2)}`, w })
-    if (depth === 0) {
-      flor(x2, y2, 3.2 + r() * 2.8)
-      if (r() < 0.5) flor(x2 + (r() - 0.5) * 26, y2 - r() * 14, 2.4 + r() * 2)
-      return
-    }
-    if (depth <= 2 && r() < 0.7) flor((x + x2) / 2, (y + y2) / 2 - 4, 2.4 + r() * 2)
-    // abre hacia afuera: la copa crece ancha, como sombrilla
-    const afuera = Math.cos(ang) >= 0 ? -1 : 1
-    const a1 = ang + 0.28 + r() * 0.32
-    const a2 = ang - 0.28 - r() * 0.32
-    const sesgo = depth < 5 ? afuera * 0.1 : 0
-    const k = 0.74 + r() * 0.12
-    rama(x2, y2, a1 + sesgo, len * k, w * 0.64, depth - 1)
-    rama(x2, y2, a2 + sesgo, len * (k - 0.04), w * 0.64, depth - 1)
-  }
-
-  const bx = CX
-  const by = 795
-  ramas.push({ d: `M${bx - 12} ${by}Q${bx - 2} ${by - 70} ${bx} ${by - 135}`, w: 21 })
-  rama(bx, by - 135, Math.PI / 2 + 0.62, 76, 11.5, 6)
-  rama(bx, by - 135, Math.PI / 2 - 0.6, 80, 11.5, 6)
-  rama(bx, by - 135, Math.PI / 2 + 0.08, 70, 10, 6)
-
-  const grupos = new Map<string, string>()
-  for (const { d, w } of ramas) {
-    const k = f(Math.max(0.9, Math.round(w * 2) / 2))
-    grupos.set(k, (grupos.get(k) ?? '') + d)
-  }
-  let out = '<g fill="none" stroke="currentColor" stroke-linecap="round">'
-  for (const [w, d] of grupos) out += `<path stroke-width="${w}" d="${d}"/>`
-  for (const [k, d] of flores) out += `<path stroke-width="${k}" d="${d}"/>`
-  out += '</g>'
-  return out
-}
-
-function pasto() {
-  const r = rng(91)
+/** Planta de hojas: tallos curvos con hojas alternas y algunas flores (silueta). */
+function planta(x: number, y: number, alto: number, r: () => number, lado: number) {
   let d = ''
-  const brizna = (x: number, y: number, h: number, bend: number, w: number) => {
-    d += `M${i0(x - w)} ${i0(y)}Q${i0(x + bend * 0.4)} ${i0(y - h * 0.6)} ${i0(x + bend)} ${i0(y - h)}Q${i0(x + bend * 0.4 + w)} ${i0(y - h * 0.6)} ${i0(x + w)} ${i0(y)}Z`
+  const tallos = 4 + Math.floor(r() * 4)
+  for (let t = 0; t < tallos; t++) {
+    const h = alto * (0.55 + r() * 0.45)
+    const inc = (r() - 0.5 + lado * 0.25) * 0.9
+    const tx = x + (r() - 0.5) * alto * 0.3
+    const ex = tx + Math.sin(inc) * h
+    const ey = y - Math.cos(inc) * h
+    const cx = tx + Math.sin(inc) * h * 0.3
+    const cy = y - h * 0.6
+    d += `M${i0(tx - 1.5)} ${i0(y)}Q${i0(cx)} ${i0(cy)} ${i0(ex)} ${i0(ey)}Q${i0(cx + 3)} ${i0(cy)} ${i0(tx + 1.5)} ${i0(y)}Z`
+    // hojas a lo largo del tallo
+    const hojas = 3 + Math.floor(r() * 3)
+    for (let k = 1; k <= hojas; k++) {
+      const u = k / (hojas + 1)
+      const px = tx + (ex - tx) * u
+      const py = y + (ey - y) * u
+      const lv = (k % 2 ? 1 : -1) * (0.7 + r() * 0.5) + inc
+      const L = alto * (0.1 + r() * 0.08) * (1 - u * 0.5)
+      const hx = px + Math.sin(lv) * L
+      const hy = py - Math.cos(lv) * L
+      const nx = Math.cos(lv) * L * 0.32
+      const ny = Math.sin(lv) * L * 0.32
+      d += `M${i0(px)} ${i0(py)}Q${i0((px + hx) / 2 + nx)} ${i0((py + hy) / 2 + ny)} ${i0(hx)} ${i0(hy)}Q${i0((px + hx) / 2 - nx)} ${i0((py + hy) / 2 - ny)} ${i0(px)} ${i0(py)}Z`
+    }
+    if (r() < 0.45) {
+      // flor de cinco pétalos en la punta
+      const s = 4 + r() * 4
+      for (let p = 0; p < 5; p++) {
+        const a = (p / 5) * 6.283
+        const fx = ex + Math.cos(a) * s
+        const fy = ey + Math.sin(a) * s
+        d += `M${i0(fx - s)} ${i0(fy)}a${i0(s)} ${i0(s)} 0 1 0 ${i0(2 * s)} 0a${i0(s)} ${i0(s)} 0 1 0 ${i0(-2 * s)} 0`
+      }
+    }
   }
-  const suelo = (x: number) => 818 + 18 * Math.sin(x * 0.004 + 1.2) - 34 * Math.exp(-(((x - CX) / 260) ** 2))
-  // más pasto y más alto lejos del árbol
-  for (let i = 0; i < 190; i++) {
-    const x = -20 + r() * (W + 40)
-    const lejos = Math.min(1, Math.abs(x - CX) / 900)
-    if (r() > 0.15 + lejos) continue
-    const h = 10 + r() * 70 * lejos
-    brizna(x, suelo(x) + 4, h, (r() - 0.5) * h * 0.7, 1.4 + r() * 1.8 * lejos)
-  }
-  let loma = `M-40 ${H}`
-  for (let x = -40; x <= W + 40; x += 20) loma += `L${x} ${i0(suelo(x))}`
-  loma += `L${W + 40} ${H}Z`
-  return `<path fill="currentColor" d="${loma}${d}"/>`
+  return d
 }
 
-const GENERA = { lejanas, medias, bosque, cercanas, primerPlano: () => arbol() + pasto() }
+function primerPlano() {
+  const r = rng(91)
+  // loma: baja a los lados del árbol y sube en las esquinas, donde crecen las plantas
+  const suelo = cresta(
+    [
+      [-200, 640], [0, 650], [140, 690], [320, 735], [460, 700], [620, 664], [790, 652], [930, 662],
+      [1080, 690], [1200, 715], [1330, 690], [1460, 640], [1552, 620], [1760, 610],
+    ],
+    5,
+    2,
+  )
+  let d = `M-20 ${H}`
+  for (let x = -20; x <= W + 20; x += 12) d += `L${x} ${i0(suelo(x))}`
+  d += `L${W + 20} ${H}Z`
+
+  // pasto
+  for (let i = 0; i < 170; i++) {
+    const x = -20 + r() * (W + 40)
+    const centro = Math.abs(x - X(790)) < 220
+    if (centro && r() < 0.7) continue
+    const h = 12 + r() * (centro ? 18 : 58)
+    const b = (r() - 0.5) * h * 0.6
+    const y = suelo(x) + 5
+    d += `M${i0(x - 2)} ${i0(y)}Q${i0(x + b * 0.4)} ${i0(y - h * 0.6)} ${i0(x + b)} ${i0(y - h)}Q${i0(x + b * 0.4 + 2)} ${i0(y - h * 0.6)} ${i0(x + 2)} ${i0(y)}Z`
+  }
+
+  // plantas en las esquinas (como en el diseño: izquierda baja, derecha más frondosa)
+  const izq: [number, number][] = [[-120, 150], [-20, 210], [40, 170], [110, 120], [170, 90]]
+  const der: [number, number][] = [[1180, 130], [1260, 170], [1340, 230], [1420, 270], [1490, 300], [1560, 260], [1650, 220], [1740, 180]]
+  for (const [x, alto] of izq) d += planta(X(x), suelo(X(x)) + 10, alto * K, r, 1)
+  for (const [x, alto] of der) d += planta(X(x), suelo(X(x)) + 10, alto * K, r, -1)
+
+  // árbol de la marca: base del tronco en x=790, y=655 del diseño; ancho ≈ 600 px del diseño
+  const s = 0.74 // el trazo está a la mitad de resolución
+  const tx = X(790) - 463 * s
+  const ty = Y(655) - ARBOL_H * s
+  return (
+    `<path fill="currentColor" d="${d}"/>` +
+    `<path fill="currentColor" fill-rule="evenodd" transform="translate(${i0(tx)} ${i0(ty)}) scale(${s})" d="${ARBOL_D}"/>`
+  )
+}
+
+const GENERA = { lejanas, laderas, bosque, cercanas, primerPlano }
 export type CapaId = keyof typeof GENERA
 const cache: Partial<Record<CapaId, string>> = {}
 
-/**
- * Se calcula solo cuando se pide (en el build, al prerenderizar). En el navegador el SVG
- * ya viene en el HTML, así que normalmente nunca se ejecuta: cero costo al cargar.
- */
+/** Se calcula solo al prerenderizar (o en dev): en producción el SVG ya viene en el HTML. */
 export function escena(id: CapaId) {
   return (cache[id] ??= GENERA[id]())
 }
